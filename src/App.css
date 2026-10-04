@@ -1,184 +1,82 @@
-.counter {
-  font-size: 16px;
-  padding: 5px 10px;
-  border-radius: 5px;
-  color: var(--accent);
-  background: var(--accent-bg);
-  border: 2px solid transparent;
-  transition: border-color 0.3s;
-  margin-bottom: 24px;
-
-  &:hover {
-    border-color: var(--accent-border);
-  }
-  &:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
-}
-
-.hero {
-  position: relative;
-
-  .base,
-  .framework,
-  .vite {
-    inset-inline: 0;
-    margin: 0 auto;
-  }
-
-  .base {
-    width: 170px;
-    position: relative;
-    z-index: 0;
-  }
-
-  .framework,
-  .vite {
-    position: absolute;
-  }
-
-  .framework {
-    z-index: 1;
-    top: 34px;
-    height: 28px;
-    transform: perspective(2000px) rotateZ(300deg) rotateX(44deg) rotateY(39deg)
-      scale(1.4);
-  }
-
-  .vite {
-    z-index: 0;
-    top: 107px;
-    height: 26px;
-    width: auto;
-    transform: perspective(2000px) rotateZ(300deg) rotateX(40deg) rotateY(39deg)
-      scale(0.8);
-  }
-}
-
-#center {
-  display: flex;
-  flex-direction: column;
-  gap: 25px;
-  place-content: center;
-  place-items: center;
-  flex-grow: 1;
-
-  @media (max-width: 1024px) {
-    padding: 32px 20px 24px;
-    gap: 18px;
-  }
-}
-
-#next-steps {
-  display: flex;
-  border-top: 1px solid var(--border);
-  text-align: left;
-
-  & > div {
-    flex: 1 1 0;
-    padding: 32px;
-    @media (max-width: 1024px) {
-      padding: 24px 20px;
-    }
-  }
-
-  .icon {
-    margin-bottom: 16px;
-    width: 22px;
-    height: 22px;
-  }
-
-  @media (max-width: 1024px) {
-    flex-direction: column;
-    text-align: center;
-  }
-}
-
-#docs {
-  border-right: 1px solid var(--border);
-
-  @media (max-width: 1024px) {
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-  }
-}
-
-#next-steps ul {
-  list-style: none;
-  padding: 0;
-  display: flex;
-  gap: 8px;
-  margin: 32px 0 0;
-
-  .logo {
-    height: 18px;
-  }
-
-  a {
-    color: var(--text-h);
-    font-size: 16px;
-    border-radius: 6px;
-    background: var(--social-bg);
-    display: flex;
-    padding: 6px 12px;
-    align-items: center;
-    gap: 8px;
-    text-decoration: none;
-    transition: box-shadow 0.3s;
-
-    &:hover {
-      box-shadow: var(--shadow);
-    }
-    .button-icon {
-      height: 18px;
-      width: 18px;
-    }
-  }
-
-  @media (max-width: 1024px) {
-    margin-top: 20px;
-    flex-wrap: wrap;
-    justify-content: center;
-
-    li {
-      flex: 1 1 calc(50% - 8px);
-    }
-
-    a {
-      width: 100%;
-      justify-content: center;
-      box-sizing: border-box;
-    }
-  }
-}
-
-#spacer {
-  height: 88px;
-  border-top: 1px solid var(--border);
-  @media (max-width: 1024px) {
-    height: 48px;
-  }
-}
-
-.ticks {
-  position: relative;
-  width: 100%;
-
-  &::before,
-  &::after {
-    content: '';
-    position: absolute;
-    top: -4.5px;
-    border: 5px solid transparent;
-  }
-
-  &::before {
-    left: 0;
-    border-left-color: var(--border);
-  }
-  &::after {
-    right: 0;
-    border-right-color: var(--border);
-  }
-}
+.app-shell { min-height: 100vh; position: relative; overflow: hidden; background: radial-gradient(circle at 76% 4%, rgba(199,141,85,.12), transparent 28rem), var(--ink); }
+.ambient-glow { position: absolute; pointer-events: none; filter: blur(1px); opacity: .35; }
+.ambient-glow--one { width: 20rem; height: 20rem; right: -8rem; top: 18rem; border: 1px solid rgba(199,141,85,.18); border-radius: 50%; }
+.ambient-glow--two { width: 11rem; height: 11rem; left: -6rem; top: 34rem; border: 1px solid rgba(199,141,85,.12); border-radius: 50%; }
+.game-header, .game-layout, .app-footer { width: min(1180px, calc(100% - 40px)); margin-inline: auto; position: relative; z-index: 1; }
+.game-header { min-height: 84px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); }
+.brand-lockup { display: flex; align-items: center; gap: 11px; }
+.brand-mark { color: var(--copper-bright); font-size: 18px; transform: rotate(45deg); display: inline-block; }
+.brand-name { font-size: 14px; font-weight: 700; letter-spacing: .18em; color: var(--paper); }
+.brand-name em { color: var(--copper-bright); font-style: normal; font-weight: 400; }
+.session-status { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 11px; letter-spacing: .04em; }
+.status-dot { width: 7px; height: 7px; background: var(--moss); border-radius: 50%; box-shadow: 0 0 0 4px rgba(141,163,119,.1); }
+.status-dot.is-thinking { background: var(--copper-bright); animation: pulse 1.3s infinite; }
+.session-id { color: var(--muted-dark); border-left: 1px solid var(--line); padding-left: 10px; }
+.game-layout { display: grid; grid-template-columns: minmax(0, 1fr) 285px; gap: 72px; padding: 72px 0 32px; }
+.story-column { min-width: 0; }
+.section-kicker { display: flex; align-items: center; gap: 10px; color: var(--copper-bright); text-transform: uppercase; letter-spacing: .16em; font-size: 10px; font-weight: 700; }
+.kicker-line { width: 24px; height: 1px; background: var(--copper); display: inline-block; }
+.narrative-heading-row { display: flex; justify-content: space-between; gap: 24px; align-items: end; margin: 22px 0 42px; }
+.narrative-panel h1 { margin: 0; color: var(--paper); font: 400 clamp(2.5rem, 6vw, 5.15rem)/.98 'Libre Baskerville', Georgia, serif; letter-spacing: -.065em; }
+.narrative-panel h1 em { color: var(--copper-bright); font-style: italic; }
+.chapter-label { color: var(--muted-dark); text-align: right; font-size: 9px; letter-spacing: .15em; line-height: 1.7; white-space: nowrap; }
+.chapter-label strong { color: var(--muted); font-weight: 500; }
+.narrative-history { border-top: 1px solid var(--line); }
+.narrative-entry { padding: 24px 0; border-bottom: 1px solid var(--line); animation: reveal .45s ease both; }
+.narrative-entry--mestre { max-width: 680px; }
+.narrative-entry--voce { max-width: 590px; margin-left: auto; padding-left: 20%; }
+.entry-meta { display: flex; align-items: center; gap: 9px; color: var(--muted-dark); font-size: 10px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; margin-bottom: 12px; }
+.entry-avatar { width: 21px; height: 21px; display: grid; place-items: center; border: 1px solid var(--line-strong); border-radius: 50%; color: var(--copper-bright); font-size: 9px; }
+.narrative-entry--voce .entry-avatar { color: var(--paper); border-color: var(--line); }
+.narrative-entry p { margin: 0; color: var(--paper); font: 400 clamp(1.06rem, 2vw, 1.35rem)/1.65 'Libre Baskerville', Georgia, serif; }
+.narrative-entry--voce p { color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 15px; line-height: 1.55; }
+.loading-state { display: flex; align-items: center; gap: 11px; padding: 20px 0; color: var(--copper-bright); font-size: 12px; letter-spacing: .06em; }
+.loading-glyph { animation: spin 1.5s linear infinite; }
+.resolution-card { margin: 22px 0 30px; padding: 20px 22px; background: rgba(29,38,49,.75); border: 1px solid var(--line); border-left: 2px solid var(--moss); border-radius: 2px 12px 12px 2px; animation: reveal .45s ease both; }
+.resolution-card.is-failure { border-left-color: var(--danger); }
+.resolution-topline, .resolution-title-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.resolution-rule { color: var(--muted-dark); font-size: 9px; letter-spacing: .05em; }
+.resolution-title-row { margin: 16px 0 18px; }
+.resolution-title-row h2 { margin: 0; color: var(--paper); font: 400 18px 'Libre Baskerville', Georgia, serif; }
+.resolution-badge { color: var(--moss); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.is-failure .resolution-badge { color: var(--danger); }
+.resolution-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.resolution-stats div { display: grid; gap: 4px; }
+.resolution-stats span { color: var(--muted-dark); font-size: 10px; letter-spacing: .06em; }
+.resolution-stats strong { color: var(--paper); font-size: 18px; font-weight: 500; }
+.action-composer { margin-top: 44px; padding-top: 22px; border-top: 1px solid var(--line); }
+.action-composer > label { display: block; color: var(--paper); font: 400 18px 'Libre Baskerville', Georgia, serif; margin-bottom: 12px; }
+.composer-row { display: flex; gap: 10px; }
+.composer-row textarea { flex: 1; resize: vertical; min-height: 67px; padding: 14px 15px; color: var(--paper); background: rgba(23,30,40,.8); border: 1px solid var(--line); border-radius: 9px; outline: none; line-height: 1.45; }
+.composer-row textarea:focus { border-color: var(--copper); box-shadow: 0 0 0 3px rgba(199,141,85,.1); }
+.composer-row textarea::placeholder { color: var(--muted-dark); }
+.composer-row button { min-width: 112px; align-self: stretch; display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--ink); background: var(--copper-bright); border: 0; border-radius: 9px; font-weight: 700; transition: background .2s, transform .2s; }
+.composer-row button:hover:not(:disabled) { background: #f0ba80; transform: translateY(-1px); }
+.composer-row button:disabled { opacity: .38; }
+.composer-hint { margin-top: 11px; color: var(--muted-dark); font-size: 11px; }
+.composer-hint span { color: var(--copper); margin-right: 6px; }
+.button-spinner { width: 14px; height: 14px; border: 2px solid rgba(16,21,29,.25); border-top-color: var(--ink); border-radius: 50%; animation: spin .7s linear infinite; }
+.sidebar-column { padding-top: 89px; }
+.character-card { display: flex; gap: 14px; padding: 16px; border: 1px solid var(--line); background: rgba(23,30,40,.7); }
+.portrait-placeholder { flex: 0 0 49px; height: 62px; display: grid; place-items: center; background: linear-gradient(145deg, #2b3540, #111820); border: 1px solid var(--line-strong); color: var(--copper-bright); font-size: 20px; }
+.character-info { min-width: 0; }
+.eyebrow { color: var(--muted-dark); display: block; font-size: 9px; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 5px; }
+.character-info h2 { overflow: hidden; color: var(--paper); font: 400 17px 'Libre Baskerville', Georgia, serif; text-overflow: ellipsis; white-space: nowrap; margin: 0 0 13px; }
+.character-stats { display: flex; gap: 13px; }
+.character-stats span { display: grid; gap: 2px; }
+.character-stats small { color: var(--muted-dark); font-size: 9px; text-transform: uppercase; }
+.character-stats strong { color: var(--paper); font-size: 13px; font-weight: 600; }
+.sidebar-note { display: flex; gap: 12px; margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; line-height: 1.6; }
+.note-mark { color: var(--copper); font-size: 16px; }
+.sidebar-note p { margin: 0; }
+.sidebar-note strong { color: var(--paper); font-weight: 500; }
+.error-banner { display: flex; gap: 12px; margin-top: 24px; padding: 14px 16px; color: var(--danger); border: 1px solid rgba(217,135,115,.35); background: rgba(217,135,115,.08); border-radius: 8px; font-size: 12px; }
+.error-icon { display: grid; place-items: center; width: 19px; height: 19px; border: 1px solid currentColor; border-radius: 50%; font-weight: 700; }
+.error-banner strong { display: block; font-size: 12px; }
+.error-banner p { margin: 4px 0 0; color: #c59d91; line-height: 1.45; }
+.app-footer { display: flex; justify-content: space-between; padding: 22px 0 30px; color: var(--muted-dark); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; }
+@keyframes reveal { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse { 50% { box-shadow: 0 0 0 6px rgba(199,141,85,.04); opacity: .45; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (max-width: 760px) { .game-header, .game-layout, .app-footer { width: min(100% - 32px, 600px); } .game-header { min-height: 72px; } .session-id { display: none; } .game-layout { display: block; padding: 42px 0 18px; } .sidebar-column { padding-top: 32px; } .narrative-heading-row { align-items: start; margin-bottom: 28px; } .chapter-label { padding-top: 5px; } .narrative-entry--voce { padding-left: 10%; } .app-footer { padding-bottom: 24px; } }
+@media (max-width: 480px) { .brand-name { font-size: 12px; } .session-status { font-size: 10px; } .narrative-heading-row { display: block; } .chapter-label { display: block; text-align: left; margin-top: 16px; } .narrative-panel h1 { font-size: clamp(2.35rem, 13vw, 3.8rem); } .narrative-entry p { font-size: 16px; } .narrative-entry--voce { padding-left: 6%; } .composer-row { display: block; } .composer-row textarea { width: 100%; min-height: 74px; } .composer-row button { width: 100%; min-height: 48px; margin-top: 8px; } .resolution-stats { gap: 9px; } .resolution-stats strong { font-size: 16px; } .resolution-card { padding: 17px 15px; } .resolution-rule { display: none; } }

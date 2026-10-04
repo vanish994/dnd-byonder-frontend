@@ -1,0 +1,9 @@
+services:
+  - type: web
+    runtime: static
+    name: dnd-byonder-frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_GAME_API_URL
+        sync: false

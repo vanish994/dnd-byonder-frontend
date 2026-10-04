@@ -1,32 +1,43 @@
-# React + TypeScript + Vite
+# D&D Byonder Solo — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Frontend React + TypeScript + Vite para uma primeira sessão jogável de D&D Solo. A interface é mobile-first, instalável como PWA e se comunica somente com o endpoint real do Marco 5:
 
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```text
+POST ${VITE_GAME_API_URL}/v1/game/turn
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Desenvolvimento
+
+Crie um `.env.local` a partir do exemplo:
+
+```bash
+cp .env.example .env.local
+npm install
+npm run dev
+```
+
+Defina `VITE_GAME_API_URL` com a URL pública do serviço `dnd-2024-rule-engine`. O navegador não recebe `RULE_ENGINE_API_KEY`, `MIMO_API_KEY` ou qualquer credencial privada. A autenticação do backend deve ser resolvida na infraestrutura/proxy apropriada; esta v0.1 envia somente o contrato público do turno.
+
+## Comandos
+
+```bash
+npm run typecheck
+npm run lint
+npm test
+npm run build
+```
+
+## Contrato e comportamento
+
+O cliente envia `campaign_id`, `state`, `player_input`, `action: null` e `available_actions`. Texto livre permanece texto livre: não há regex, heurística, LLM, rolagem ou cálculo mecânico no frontend. O `state` retornado pelo backend substitui o estado local da sessão, enquanto o histórico da tela é somente apresentação.
+
+Quando o backend retorna `rule_resolution` com `status: "resolved"`, o cartão mostra os dados que vieram do Rule Engine. Para `needs_rule_validation`, nenhum cartão de dados falso é renderizado.
+
+## Render Static Site
+
+- **Repository:** `vanish994/dnd-byonder-frontend`
+- **Build command:** `npm ci && npm run build`
+- **Publish directory:** `dist`
+- **Environment variable:** `VITE_GAME_API_URL=https://SEU-RULE-ENGINE.onrender.com`
+
+O frontend não faz deploy automaticamente neste marco.
