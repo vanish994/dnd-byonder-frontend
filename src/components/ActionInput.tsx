@@ -4,9 +4,10 @@ import type { FormEvent } from 'react'
 interface ActionInputProps {
   isLoading: boolean
   onSubmit: (value: string) => Promise<boolean>
+  suggestions?: string[]
 }
 
-export function ActionInput({ isLoading, onSubmit }: ActionInputProps) {
+export function ActionInput({ isLoading, onSubmit, suggestions = [] }: ActionInputProps) {
   const [value, setValue] = useState('')
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -16,25 +17,49 @@ export function ActionInput({ isLoading, onSubmit }: ActionInputProps) {
     if (sent) setValue('')
   }
 
+  function chooseSuggestion(suggestion: string) {
+    setValue(suggestion)
+    document.getElementById('player-action')?.focus()
+  }
+
   return (
-    <form className="action-composer" onSubmit={handleSubmit}>
-      <label htmlFor="player-action">O que você faz?</label>
-      <div className="composer-row">
-        <textarea
-          id="player-action"
-          value={value}
-          onChange={(event) => setValue(event.target.value)}
-          placeholder="Descreva sua próxima ação..."
-          rows={2}
-          maxLength={4000}
-          disabled={isLoading}
-        />
-        <button type="submit" disabled={isLoading || !value.trim()}>
-          {isLoading ? <span className="button-spinner" aria-label="Enviando" /> : 'Enviar'}
-          <span aria-hidden="true">↗</span>
-        </button>
+    <section className="action-zone" aria-label="Ações do jogador">
+      <div className="action-heading">
+        <div>
+          <span className="section-kicker"><span className="kicker-line" /> Próximo movimento</span>
+          <h2>O que você faz?</h2>
+        </div>
+        <span className="action-glyph" aria-hidden="true">⌁</span>
       </div>
-      <div className="composer-hint"><span>↳</span> Texto livre. O Mestre decide o que acontece.</div>
-    </form>
+      {suggestions.length > 0 && (
+        <div className="suggested-actions" aria-label="Sugestões de ação">
+          <span className="suggested-label">Você pode</span>
+          {suggestions.map((suggestion) => (
+            <button type="button" className="suggested-action" key={suggestion} onClick={() => chooseSuggestion(suggestion)} disabled={isLoading}>
+              {suggestion}
+            </button>
+          ))}
+        </div>
+      )}
+      <form className="action-composer" onSubmit={handleSubmit}>
+        <label htmlFor="player-action"><span className="input-rune" aria-hidden="true">ᛉ</span> Descreva sua ação</label>
+        <div className="composer-row">
+          <textarea
+            id="player-action"
+            value={value}
+            onChange={(event) => setValue(event.target.value)}
+          placeholder="Descreva sua próxima ação..."
+            rows={2}
+            maxLength={4000}
+            disabled={isLoading}
+          />
+          <button type="submit" disabled={isLoading || !value.trim()}>
+            {isLoading ? <span className="button-spinner" aria-label="Enviando" /> : <span className="send-arrow" aria-hidden="true">↗</span>}
+            <span>{isLoading ? 'Enviando' : 'Enviar'}</span>
+          </button>
+        </div>
+        <div className="composer-hint"><span>✦</span> Linguagem livre. As regras serão resolvidas pelo Mestre.</div>
+      </form>
+    </section>
   )
 }

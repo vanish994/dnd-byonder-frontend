@@ -17,15 +17,10 @@ export function useGameSession() {
   const sendAction = useCallback(async (playerInput: string) => {
     const text = playerInput.trim()
     if (!text || isLoading) return false
-
     setError(null)
     setIsLoading(true)
     const timestamp = Date.now()
-    setHistory((current) => [
-      ...current,
-      { id: `player-${timestamp}`, speaker: 'voce', text, timestamp },
-    ])
-
+    setHistory((current) => [...current, { id: `player-${timestamp}`, speaker: 'voce', text, timestamp }])
     try {
       const response = await sendGameTurn({
         campaign_id: campaignId,
@@ -36,10 +31,7 @@ export function useGameSession() {
       })
       setState(response.state)
       setRuleResolution(response.rule_resolution)
-      setHistory((current) => [
-        ...current,
-        { id: `master-${Date.now()}`, speaker: 'mestre', text: response.narration, timestamp: Date.now() },
-      ])
+      setHistory((current) => [...current, { id: `master-${Date.now()}`, speaker: 'mestre', text: response.narration, timestamp: Date.now() }])
       return true
     } catch (requestError) {
       setError(requestError instanceof GameApiError ? requestError : new GameApiError('Erro inesperado.', 'network'))
@@ -49,13 +41,5 @@ export function useGameSession() {
     }
   }, [campaignId, isLoading, state])
 
-  return useMemo(() => ({
-    campaignId,
-    state,
-    history,
-    ruleResolution,
-    isLoading,
-    error,
-    sendAction,
-  }), [campaignId, error, history, isLoading, ruleResolution, sendAction, state])
+  return useMemo(() => ({ campaignId, state, history, ruleResolution, isLoading, error, sendAction }), [campaignId, error, history, isLoading, ruleResolution, sendAction, state])
 }
