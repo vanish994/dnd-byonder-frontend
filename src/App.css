@@ -87,6 +87,8 @@
 .structured-action-card__copy { min-width: 0; }
 .structured-action-card__copy h3 { margin: 9px 0 5px; color: var(--paper); font: 500 17px 'Cinzel', Georgia, serif; }
 .structured-action-card__copy p { margin: 0; color: var(--ash); font-size: 11px; }
+.move-distance { display: inline-flex; align-items: center; gap: 7px; margin-top: 10px; color: var(--ash); font-size: 10px; }
+.move-distance input { width: 72px; padding: 5px 7px; color: var(--paper); background: rgba(17, 19, 22, .9); border: 1px solid var(--line); }
 .structured-action-card__button { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 42px; padding: 0 15px; color: var(--void); background: var(--bronze-light); border: 0; border-radius: 2px; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; transition: background .2s, transform .2s, box-shadow .2s; }
 .structured-action-card__button:hover:not(:disabled) { background: var(--amber); box-shadow: 0 8px 25px rgba(211, 154, 82, .14); transform: translateY(-2px); }
 .structured-action-card__button:disabled { cursor: wait; opacity: .55; }
@@ -120,6 +122,10 @@
 .composer-hint span { color: var(--bronze-light); margin-right: 6px; }
 .button-spinner { width: 13px; height: 13px; border: 2px solid rgba(11, 12, 14, .25); border-top-color: var(--void); border-radius: 50%; animation: spin .7s linear infinite; }
 .character-panel { padding: 17px; background: rgba(23, 25, 27, .86); border: 1px solid var(--line); box-shadow: 0 14px 45px rgba(0, 0, 0, .2); }
+.character-equipment { display: grid; gap: 8px; padding: 14px 0 4px; border-bottom: 1px solid var(--line); }
+.equipment-heading { color: var(--bronze-light); font-size: 9px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+.equipment-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--paper-muted); font-size: 11px; }
+.equipment-row small { color: var(--ash-dark); font-size: 9px; text-transform: uppercase; }
 .panel-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 17px; }
 .panel-kicker { color: var(--paper-muted); font-size: 9px; }
 .rune-mark { color: var(--bronze-light); font-size: 14px; }

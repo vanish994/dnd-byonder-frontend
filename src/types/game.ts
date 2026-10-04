@@ -84,6 +84,11 @@ export interface RuleResolution {
   outcome?: {
     total?: number
     success?: boolean
+    current_actor_id?: string
+    round?: number
+    turn_index?: number
+    turn_order?: unknown
+    [key: string]: unknown
   }
   rules_used?: string[]
   reason?: string

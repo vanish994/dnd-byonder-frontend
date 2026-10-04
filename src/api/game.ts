@@ -186,8 +186,10 @@ async function request(path: string, payload?: unknown, signal?: AbortSignal): P
 
     if (!response.ok) {
       // Do not echo arbitrary upstream error bodies or secrets into the browser.
-      const message = response.status === 400 || response.status === 422
-        ? 'Confira as escolhas do personagem e tente novamente.'
+      const message = response.status === 422 && path === '/v1/game/turn'
+        ? 'Essa ação não pode ser executada agora. Aguarde o turno correto ou escolha outra ação.'
+        : response.status === 400 || response.status === 422
+          ? 'Confira as escolhas do personagem e tente novamente.'
         : response.status === 429 ? 'Muitas tentativas. Aguarde um momento e tente novamente.'
           : 'O serviço está indisponível agora. Tente novamente.'
       throw new GameApiError(message, 'http', response.status)

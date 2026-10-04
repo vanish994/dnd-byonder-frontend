@@ -20,6 +20,18 @@ export function CharacterSummary({ state, character, classLabel, derived }: Char
     : characterClass && typeof characterClass === 'object' && 'id' in characterClass && typeof characterClass.id === 'string' ? characterClass.id : null
   )
   const xp = typeof current.xp === 'number' ? current.xp : null
+  const inventory = current.inventory && typeof current.inventory === 'object' && !Array.isArray(current.inventory)
+    ? current.inventory as Record<string, unknown> : {}
+  const equipped = current.equipped && typeof current.equipped === 'object' && !Array.isArray(current.equipped)
+    ? current.equipped as Record<string, unknown> : {}
+  const inventoryItems = Object.entries(inventory).map(([id, value]) => {
+    const entry = value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
+    const item = entry.item && typeof entry.item === 'object' && !Array.isArray(entry.item) ? entry.item as Record<string, unknown> : {}
+    const label = typeof item.name === 'string' ? item.name : typeof item.label === 'string' ? item.label : id
+    const quantity = typeof entry.quantity === 'number' ? entry.quantity : 1
+    const equippedSlot = Object.entries(equipped).find(([, itemId]) => itemId === id)?.[0]
+    return { id, label, quantity, equippedSlot }
+  })
   const hpRatio = hp !== null && maxHp !== null && maxHp > 0 ? Math.max(0, Math.min(100, (hp / maxHp) * 100)) : 0
 
   return (
@@ -48,6 +60,17 @@ export function CharacterSummary({ state, character, classLabel, derived }: Char
       <div className="hp-track" aria-label={hp !== null && maxHp !== null ? `${hp} de ${maxHp} pontos de vida` : 'Pontos de vida não informados'}>
         <span style={{ width: `${hpRatio}%` }} />
       </div>
+      {inventoryItems.length > 0 && (
+        <div className="character-equipment" aria-label="Equipamento">
+          <span className="equipment-heading">Equipamento</span>
+          {inventoryItems.map((item) => (
+            <div className="equipment-row" key={item.id}>
+              <span>{item.label} ×{item.quantity}</span>
+              {item.equippedSlot && <small>{item.equippedSlot === 'weapon' ? 'equipada' : 'vestida'}</small>}
+            </div>
+          ))}
+        </div>
+      )}
       <div className="character-footer"><span><i aria-hidden="true">◈</i> Ficha fornecida pelo Mestre</span></div>
     </aside>
   )
