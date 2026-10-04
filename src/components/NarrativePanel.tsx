@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import type { GameState, NarrativeEntry } from '../types/game'
 
 interface NarrativePanelProps {
@@ -7,9 +8,16 @@ interface NarrativePanelProps {
 }
 
 export function NarrativePanel({ history, state, narrationStatus = 'available' }: NarrativePanelProps) {
+  const historyRef = useRef<HTMLDivElement>(null)
   const scene = state.scene && typeof state.scene === 'object' && !Array.isArray(state.scene)
     ? state.scene as Record<string, unknown>
     : null
+
+  useEffect(() => {
+    const historyElement = historyRef.current
+    if (historyElement) historyElement.scrollTop = historyElement.scrollHeight
+  }, [history.length])
+
   return (
     <section className="narrative-panel" id="adventure" aria-labelledby="narrative-title">
       <div className="scene-banner">
@@ -24,7 +32,7 @@ export function NarrativePanel({ history, state, narrationStatus = 'available' }
         </div>
         <div className="chapter-label"><span>CRÔNICA ATUAL</span><strong>Uma nova lenda se escreve</strong></div>
       </div>
-      <div className="narrative-history" aria-live="polite">
+      <div className="narrative-history" ref={historyRef} tabIndex={0} aria-label="Histórico da narrativa" aria-live="polite">
         {narrationStatus === 'unavailable' && <p className="narrative-empty">A mecânica foi resolvida; a narração está temporariamente indisponível.</p>}
         {history.length === 0 && <p className="narrative-empty">Aguardando o primeiro turno do Mestre.</p>}
         {history.map((entry, index) => (

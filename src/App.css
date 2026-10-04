@@ -275,3 +275,82 @@
   .wizard-steps li small { font-size: 8px; }
   .wizard-controls .wizard-button { flex: 1; }
 }
+
+
+/* Gate 3 — adventure surface: keep the page stable while the story grows. */
+.game-layout { min-height: calc(100dvh - 92px); }
+.story-column { display: flex; flex-direction: column; min-height: 0; }
+.narrative-panel { min-width: 0; }
+.narrative-history {
+  max-height: min(55dvh, 620px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 12px;
+  scrollbar-color: var(--bronze) rgba(239, 230, 212, .06);
+  scrollbar-width: thin;
+}
+.narrative-history:focus-visible {
+  outline: 2px solid var(--bronze-light);
+  outline-offset: 4px;
+}
+.turn-controls { min-width: 0; }
+.available-actions {
+  margin-top: 24px;
+  padding: 18px 0 1px;
+  border-top: 1px solid var(--line-bright);
+}
+.available-actions__heading { display: flex; justify-content: space-between; align-items: start; gap: 16px; }
+.available-actions__heading h2 { margin: 9px 0 0; color: var(--paper); font: 500 22px 'Cinzel', Georgia, serif; }
+.available-actions__count { display: grid; place-items: center; min-width: 26px; height: 26px; color: var(--void); background: var(--bronze-light); border-radius: 50%; font-size: 11px; font-weight: 700; }
+.available-actions__hint { margin: 9px 0 0; color: var(--paper-muted); font-size: 12px; line-height: 1.5; }
+.available-actions .structured-action-card { margin: 14px 0 0; }
+.available-actions .structured-action-card + .structured-action-card { margin-top: 9px; }
+
+@media (max-width: 760px) {
+  .app-shell:has(.game-layout) { height: 100dvh; min-height: 100dvh; overflow: hidden; }
+  .game-header { flex: 0 0 auto; }
+  .game-layout { display: flex; flex: 1 1 auto; flex-direction: column; gap: 0; height: calc(100dvh - 76px); min-height: 0; overflow: hidden; padding: 14px 0 max(14px, env(safe-area-inset-bottom)); }
+  .sidebar-column--left { flex: 0 0 auto; max-height: 116px; overflow: hidden; margin: 0 0 13px; padding: 0; }
+  .character-panel { margin: 0; padding: 11px 13px; }
+  .panel-heading { margin-bottom: 9px; }
+  .character-card { gap: 10px; padding-bottom: 9px; }
+  .portrait-frame { flex-basis: 46px; height: 57px; }
+  .portrait-glyph { font-size: 23px; }
+  .character-info h2 { margin: 5px 0 9px; }
+  .character-stats { gap: 15px; }
+  .hp-track { margin-top: 9px; }
+  .character-equipment, .character-footer { display: none; }
+  .story-column { flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; padding: 0 2px 20px 0; scrollbar-color: var(--bronze) rgba(239, 230, 212, .06); scrollbar-width: thin; }
+  .narrative-history { max-height: 43dvh; min-height: 150px; padding-right: 8px; }
+  .narrative-entry { padding: 18px 0; }
+  .narrative-entry p { font-size: 15px; line-height: 1.65; }
+  .narrative-heading-row { margin-bottom: 20px; }
+  .narrative-panel h1 { font-size: clamp(2rem, 10vw, 3.4rem); }
+  .scene-description { margin-bottom: 19px; }
+  .turn-controls { padding-bottom: 4px; }
+  .loading-state { padding: 16px 0; }
+  .combat-panel { margin: 16px 0; padding: 13px; }
+  .resolution-card { margin: 16px 0 20px; }
+  .rule-teaching-panel { margin: 16px 0 19px; padding: 15px 14px; }
+  .rule-teaching-panel__intro { margin-top: 8px; font-size: 11px; }
+  .rule-teaching-panel__tips { gap: 9px; margin-top: 12px; padding-top: 12px; }
+  .rule-teaching-panel__tips li { font-size: 11px; }
+  .available-actions { margin-top: 17px; padding-top: 15px; }
+  .available-actions__heading h2 { font-size: 19px; }
+  .available-actions__hint { font-size: 11px; }
+  .available-actions .structured-action-card { margin-top: 11px; }
+  .action-zone { margin-top: 18px; padding-top: 16px; }
+  .action-heading h2 { font-size: 21px; }
+  .composer-row textarea { font-size: 16px; }
+  .composer-hint { padding-bottom: 3px; }
+  .app-footer { display: none; }
+}
+
+@media (max-width: 480px) {
+  .game-layout { width: min(100% - 24px, 600px); }
+  .game-header { width: min(100% - 24px, 600px); }
+  .narrative-history { max-height: 39dvh; }
+  .available-actions__count { min-width: 23px; height: 23px; font-size: 10px; }
+}
+
+.narrative-entry p { white-space: pre-wrap; }

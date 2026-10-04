@@ -30,25 +30,37 @@ export function Game() {
         </aside>
         <div className="story-column">
           <NarrativePanel history={session.history} state={session.state} narrationStatus={session.narrationStatus} />
-          <RuleTeachingPanel teaching={session.ruleTeaching} />
-          {session.isLoading && <LoadingState />}
-          <CombatPanel state={session.state} />
-          <RuleResolution resolution={session.ruleResolution} />
-          {session.error && (
-            <div className="error-banner" role="alert">
-              <span className="error-icon">!</span>
-              <div><strong>{session.error.kind === 'timeout' ? 'O Mestre demorou mais que o esperado.' : 'A névoa interrompeu a sessão.'}</strong><p>{session.error.message}</p>
-                {session.failedTurn && <button className="error-retry" type="button" disabled={session.isLoading} onClick={() => void session.retryTurn()}>Tentar turno novamente</button>}
+          <div className="turn-controls">
+            {session.isLoading && <LoadingState />}
+            <CombatPanel state={session.state} />
+            <RuleResolution resolution={session.ruleResolution} />
+            <RuleTeachingPanel teaching={session.ruleTeaching} />
+            {session.error && (
+              <div className="error-banner" role="alert">
+                <span className="error-icon">!</span>
+                <div><strong>{session.error.kind === 'timeout' ? 'O Mestre demorou mais que o esperado.' : 'A névoa interrompeu a sessão.'}</strong><p>{session.error.message}</p>
+                  {session.failedTurn && <button className="error-retry" type="button" disabled={session.isLoading} onClick={() => void session.retryTurn()}>Tentar turno novamente</button>}
+                </div>
               </div>
-            </div>
-          )}
-          {session.availableActions.map((action, index) => <StructuredActionCard
-            key={`${String(action.type)}-${index}`}
-            action={action}
-            isLoading={session.isLoading}
-            onSubmit={(selected, text) => session.sendAction(text, selected)}
-          />)}
-          <ActionInput isLoading={session.isLoading} onSubmit={session.sendAction} />
+            )}
+            {session.availableActions.length > 0 && <section className="available-actions" aria-labelledby="available-actions-title">
+              <div className="available-actions__heading">
+                <div>
+                  <span className="section-kicker"><span className="kicker-line" /> Escolhas do Mestre</span>
+                  <h2 id="available-actions-title">Ações disponíveis</h2>
+                </div>
+                <span className="available-actions__count">{session.availableActions.length}</span>
+              </div>
+              <p className="available-actions__hint">Escolha uma opção abaixo ou descreva livremente o que deseja fazer.</p>
+              {session.availableActions.map((action, index) => <StructuredActionCard
+                key={`${String(action.type)}-${index}`}
+                action={action}
+                isLoading={session.isLoading}
+                onSubmit={(selected, text) => session.sendAction(text, selected)}
+              />)}
+            </section>}
+            <ActionInput isLoading={session.isLoading} onSubmit={session.sendAction} />
+          </div>
         </div>
         <aside className="sidebar-column sidebar-column--right" aria-label="Recursos da sessão">
           <div className="side-rail-heading"><span className="section-kicker"><span className="kicker-line" /> Preparação</span><span className="side-rail-count">03</span></div>
