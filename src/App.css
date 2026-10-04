@@ -415,17 +415,20 @@
 /* Mobile character creation: one viewport, dense steps, no document scroll. */
 @media (max-width: 760px) {
   .wizard-layout { overflow: hidden; padding: 8px 0; }
-  .wizard { min-height: 0; }
+  .wizard { display: flex; height: 100%; min-height: 0; flex-direction: column; }
   .wizard-intro { margin-bottom: 8px; }
   .wizard-intro h1 { margin: 5px 0; font-size: clamp(1.45rem, 7vw, 2.1rem); }
   .wizard-intro p { display: none; }
-  .wizard-panel, .wizard-notice { max-height: 100%; overflow: hidden; padding: 12px; }
+  .wizard-panel { display: flex; height: 100%; min-height: 0; max-height: 100%; flex-direction: column; overflow: hidden; padding: 12px; }
+  .wizard-notice { max-height: 100%; overflow: hidden; padding: 12px; }
   .wizard-progress { font-size: 9px; }
   .wizard-steps { gap: 2px; margin: 9px 0 12px; }
   .wizard-steps li { gap: 3px; padding-top: 5px; font-size: 9px; }
   .wizard-steps li span { font-size: 13px; }
   .wizard-steps li small { font-size: 8px; }
   .wizard-step h2 { margin-bottom: 6px; font-size: 1.2rem; }
+  .wizard-panel form { display: flex; min-height: 0; flex: 1 1 auto; flex-direction: column; }
+  .wizard-step { min-height: 0; flex: 1 1 auto; overflow-y: auto; padding: 0 2px 8px 0; scrollbar-color: var(--bronze) rgba(239, 230, 212, .06); scrollbar-width: thin; }
   .wizard-step > p { margin-bottom: 10px; font-size: 11px; line-height: 1.35; }
   .wizard-label { margin: 8px 0 5px; font-size: 10px; }
   .wizard-text, .wizard-step select { min-height: 36px; padding: 7px 9px; font-size: 12px; }
@@ -454,6 +457,6 @@
   .wizard-summary-section dl { gap: 3px; }
   .wizard-summary-section dl > div { font-size: 10px; }
   .wizard-summary-section dd small { font-size: 9px; }
-  .wizard-controls { gap: 6px; margin-top: 12px; padding-top: 10px; }
+  .wizard-controls { position: relative; z-index: 2; flex: 0 0 auto; gap: 6px; margin-top: 0; padding-top: 10px; background: linear-gradient(180deg, rgba(18, 20, 22, 0), rgba(18, 20, 22, .98) 28%); }
   .wizard-button { min-height: 36px; padding: 7px 10px; font-size: 10px; }
 }
