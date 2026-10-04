@@ -1,7 +1,9 @@
 import type { GameTurnRequest, GameTurnResponse } from '../types/game'
 
+const PUBLIC_GATEWAY_URL = 'https://dnd-byonder-gateway.onrender.com'
+
 function getApiUrl() {
-  return (import.meta.env.VITE_GAME_API_URL ?? '').replace(/\/$/, '')
+  return (import.meta.env.VITE_GAME_API_URL ?? PUBLIC_GATEWAY_URL).replace(/\/$/, '')
 }
 
 export class GameApiError extends Error {
@@ -21,10 +23,6 @@ export async function sendGameTurn(
   signal?: AbortSignal,
 ): Promise<GameTurnResponse> {
   const apiUrl = getApiUrl()
-  if (!apiUrl) {
-    throw new GameApiError('O endereço do backend não está configurado.', 'network')
-  }
-
   const controller = new AbortController()
   const timeout = window.setTimeout(() => controller.abort(), 30_000)
   const onAbort = () => controller.abort()
