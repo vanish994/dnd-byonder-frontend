@@ -312,28 +312,44 @@
 
 @media (max-width: 760px) {
   .app-shell:has(.game-layout) { height: 100dvh; min-height: 100dvh; overflow: hidden; }
-  .game-header { flex: 0 0 auto; }
-  .game-layout { display: flex; flex: 1 1 auto; flex-direction: column; gap: 0; height: calc(100dvh - 76px); min-height: 0; overflow: hidden; padding: 14px 0 max(14px, env(safe-area-inset-bottom)); }
-  .sidebar-column--left { flex: 0 0 auto; max-height: 116px; overflow: hidden; margin: 0 0 13px; padding: 0; }
-  .character-panel { margin: 0; padding: 11px 13px; }
-  .panel-heading { margin-bottom: 9px; }
-  .character-card { gap: 10px; padding-bottom: 9px; }
-  .portrait-frame { flex-basis: 46px; height: 57px; }
-  .portrait-glyph { font-size: 23px; }
-  .character-info h2 { margin: 5px 0 9px; }
-  .character-stats { gap: 15px; }
-  .hp-track { margin-top: 9px; }
+  .game-header { min-height: 58px; flex: 0 0 58px; }
+  .brand-lockup { gap: 8px; }
+  .brand-crest { width: 28px; height: 28px; }
+  .crest-eye { width: 7px; height: 4px; }
+  .crest-wing { width: 11px; height: 18px; }
+  .brand-overline { font-size: 7px; letter-spacing: .2em; }
+  .brand-name { font-size: 12px; }
+  .header-actions { gap: 8px; }
+  .session-status { font-size: 9px; }
+  .session-id, .header-actions .icon-button { display: none; }
+  .game-layout { display: flex; flex: 1 1 auto; flex-direction: column; gap: 0; height: calc(100dvh - 58px); min-height: 0; overflow: hidden; padding: 8px 0 max(8px, env(safe-area-inset-bottom)); }
+  .sidebar-column--left { flex: 0 0 auto; max-height: 84px; overflow: hidden; margin: 0 0 8px; padding: 0; }
+  .character-panel { margin: 0; padding: 7px 10px; }
+  .panel-heading { margin-bottom: 4px; }
+  .panel-kicker { font-size: 8px; }
+  .character-card { gap: 8px; padding-bottom: 4px; }
+  .portrait-frame { flex-basis: 34px; height: 42px; }
+  .portrait-glyph { font-size: 17px; }
+  .portrait-rune { font-size: 8px; }
+  .character-info h2 { margin: 2px 0 4px; font-size: 15px; }
+  .eyebrow { font-size: 8px; }
+  .character-stats { gap: 11px; }
+  .character-stats small { font-size: 7px; }
+  .character-stats strong { font-size: 13px; }
+  .hp-track { height: 2px; margin-top: 4px; }
   .character-equipment, .character-footer { display: none; }
   .story-column { display: flex; flex: 1 1 auto; flex-direction: column; overflow: hidden; padding: 0 2px 20px 0; }
-  .narrative-panel { flex-basis: clamp(280px, 38dvh, 420px); height: clamp(280px, 38dvh, 420px); padding: 14px 14px 0; background: rgba(18, 21, 23, .82); border: 1px solid var(--line); border-top-color: var(--line-bright); box-shadow: var(--shadow-deep); }
+  .narrative-panel { flex-basis: clamp(230px, 34dvh, 320px); height: clamp(230px, 34dvh, 320px); padding: 10px 11px 0; background: rgba(18, 21, 23, .82); border: 1px solid var(--line); border-top-color: var(--line-bright); box-shadow: var(--shadow-deep); }
   .narrative-history { min-height: 0; padding-right: 8px; }
-  .narrative-entry { padding: 15px 0; }
-  .narrative-entry p { font-size: 14px; line-height: 1.55; }
-  .narrative-heading-row { margin-bottom: 12px; }
-  .narrative-panel h1 { margin-top: 10px; font-size: clamp(1.65rem, 8vw, 2.5rem); }
+  .narrative-entry { padding: 11px 0; }
+  .narrative-entry p { font-size: 12px; line-height: 1.45; }
+  .narrative-heading-row { margin-bottom: 8px; }
+  .narrative-panel h1 { margin-top: 6px; font-size: clamp(1.35rem, 6vw, 1.9rem); letter-spacing: -.04em; }
+  .narrative-panel h1 br { display: none; }
   .chapter-label { display: none; }
-  .scene-banner { margin-bottom: 10px; padding-bottom: 10px; }
-  .scene-description { max-height: 3.1em; margin-bottom: 10px; overflow-y: auto; }
+  .scene-banner { margin-bottom: 6px; padding-bottom: 6px; font-size: 8px; }
+  .scene-location { font-size: 8px; }
+  .scene-description { display: -webkit-box; max-height: 2.9em; margin: 0 0 7px; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: 11px; line-height: 1.4; }
   .turn-controls { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 8px 4px 0; scrollbar-color: var(--bronze) rgba(239, 230, 212, .06); scrollbar-width: thin; }
   .loading-state { padding: 16px 0; }
   .combat-panel { margin: 16px 0; padding: 13px; }
@@ -342,13 +358,14 @@
   .rule-teaching-panel__intro { margin-top: 8px; font-size: 11px; }
   .rule-teaching-panel__tips { gap: 9px; margin-top: 12px; padding-top: 12px; }
   .rule-teaching-panel__tips li { font-size: 11px; }
-  .available-actions { margin-top: 12px; padding-top: 12px; }
-  .available-actions__heading h2 { font-size: 17px; }
+  .available-actions { margin-top: 8px; padding-top: 8px; }
+  .available-actions__heading h2 { margin-top: 5px; font-size: 15px; }
   .available-actions__hint { display: none; }
-  .available-actions .structured-action-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; margin-top: 8px; padding: 12px 13px; }
-  .available-actions .structured-action-card__copy h3 { margin: 6px 0 3px; font-size: 14px; }
-  .available-actions .structured-action-card__copy p { font-size: 10px; line-height: 1.35; }
-  .available-actions .structured-action-card__button { min-height: 36px; padding: 0 10px; font-size: 9px; }
+  .available-actions .structured-action-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin-top: 6px; padding: 8px 9px; }
+  .available-actions .structured-action-card .section-kicker { font-size: 7px; letter-spacing: .12em; }
+  .available-actions .structured-action-card__copy h3 { margin: 4px 0 2px; font-size: 12px; }
+  .available-actions .structured-action-card__copy p { display: none; }
+  .available-actions .structured-action-card__button { min-height: 30px; padding: 0 8px; font-size: 8px; letter-spacing: .05em; }
   .action-zone { margin-top: 18px; padding-top: 16px; }
   .action-heading h2 { font-size: 21px; }
   .composer-row textarea { font-size: 16px; }
