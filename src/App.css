@@ -1,6 +1,8 @@
 .app-shell { min-height: 100vh; position: relative; overflow: hidden; background: radial-gradient(circle at 48% -10%, rgba(168, 118, 62, .12), transparent 34rem), linear-gradient(120deg, #0b0c0e 0%, #101214 48%, #0b0c0e 100%); }
 .app-shell::before { content: ''; position: fixed; inset: 0; pointer-events: none; opacity: .07; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.35'/%3E%3C/svg%3E"); mix-blend-mode: screen; }
 .ambient-orb { position: absolute; pointer-events: none; border: 1px solid rgba(211, 154, 82, .16); border-radius: 50%; filter: blur(.3px); }
+.app-shell--wizard { height: 100vh; height: 100dvh; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.app-shell--wizard .game-header, .app-shell--wizard .app-footer { flex: 0 0 auto; }
 .ambient-orb--one { width: 34rem; height: 34rem; right: -17rem; top: 11rem; box-shadow: inset 0 0 80px rgba(168, 73, 50, .06); }
 .ambient-orb--two { width: 22rem; height: 22rem; left: -13rem; bottom: 5rem; border-color: rgba(211, 154, 82, .1); }
 .dragon-trace { position: absolute; pointer-events: none; width: 220px; height: 280px; opacity: .1; border: 1px solid var(--bronze); border-left: 0; border-bottom: 0; transform: rotate(23deg); }
@@ -209,8 +211,14 @@
 @media (max-width: 480px) { .header-actions { gap: 9px; } .icon-button { width: 32px; height: 32px; } .brand-overline { font-size: 7px; } .brand-name { font-size: 11px; } .brand-crest { width: 31px; height: 31px; } .scene-banner { display: block; } .scene-location { display: block; margin-top: 10px; } .narrative-heading-row { display: block; } .chapter-label { justify-items: start; margin-top: 17px; text-align: left; } .narrative-entry--voce { padding-left: 5%; } .composer-row { display: block; } .composer-row textarea { width: 100%; min-height: 82px; } .composer-row button { width: 100%; min-height: 50px; margin-top: 8px; } .resolution-card { padding: 17px 15px; } .resolution-main { gap: 16px; } .die-result { flex-basis: 64px; width: 64px; height: 64px; } .resolution-title-row { display: block; } .resolution-badge { display: block; margin-top: 9px; } .resolution-stats { gap: 10px; } .resolution-stats span { font-size: 8px; } .resolution-stats strong { font-size: 15px; } .structured-action-card { align-items: stretch; flex-direction: column; gap: 14px; margin-block: 22px; } .structured-action-card__button { width: 100%; } .suggested-actions { gap: 6px; } .suggested-label { flex-basis: 100%; margin-bottom: 1px; } .suggested-action { flex: 1; min-width: 30%; padding-inline: 7px; font-size: 10px; } .app-footer { font-size: 8px; letter-spacing: .08em; } }
 
 /* Character creation extends the existing chronicle's dark stone and bronze vocabulary. */
-.wizard-layout { position: relative; z-index: 1; width: min(900px, calc(100% - 34px)); margin-inline: auto; padding: 38px 0 70px; }
-.wizard-intro { max-width: 690px; margin-bottom: 34px; }
+.wizard-layout { position: relative; z-index: 1; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; width: min(900px, calc(100% - 34px)); margin-inline: auto; padding: clamp(12px, 2vh, 26px) 0; overflow: hidden; }
+.wizard { display: flex; height: 100%; min-height: 0; flex-direction: column; }
+.wizard-panel { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.wizard-notice { flex: 1 1 auto; min-height: 0; overflow: auto; }
+.wizard-panel form { display: flex; flex: 1 1 auto; min-height: 0; flex-direction: column; }
+.wizard-step { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-color: var(--bronze) rgba(239, 230, 212, .06); scrollbar-width: thin; }
+.wizard-controls { flex: 0 0 auto; }
+.wizard-intro { max-width: 690px; flex: 0 0 auto; margin-bottom: clamp(12px, 2vh, 24px); }
 .wizard-intro h1 { margin: 16px 0; color: var(--paper); font: 500 clamp(2.3rem, 8vw, 4.7rem)/1.08 'Cinzel', Georgia, serif; letter-spacing: -.055em; }
 .wizard-intro h1 em { color: var(--bronze-light); font: italic .73em 'Libre Baskerville', Georgia, serif; }
 .wizard-intro p { max-width: 55ch; color: var(--paper-muted); font: 14px/1.7 'Libre Baskerville', Georgia, serif; }

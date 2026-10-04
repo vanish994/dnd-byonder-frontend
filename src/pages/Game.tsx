@@ -13,7 +13,7 @@ import { useGameSession } from '../state/useGameSession'
 export function Game() {
   const session = useGameSession()
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${session.hasSession ? 'app-shell--game' : 'app-shell--wizard'}`}>
       <div className="ambient-orb ambient-orb--one" aria-hidden="true" />
       <div className="ambient-orb ambient-orb--two" aria-hidden="true" />
       <div className="dragon-trace dragon-trace--top" aria-hidden="true" />

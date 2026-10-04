@@ -188,7 +188,7 @@ export function CharacterWizard({ onCreated }: CharacterWizardProps) {
       ) : (
         <div className="wizard-panel">
           <div className="wizard-progress"><span>Criação de personagem</span><strong>Etapa {step + 1} de {steps.length}</strong></div>
-          <ol className="wizard-steps" aria-label="Etapas da criação">
+          <ol className="wizard-steps" style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }} aria-label="Etapas da criação">
             {steps.map((label, index) => (
               <li key={label} className={index === step ? 'is-active' : index < step ? 'is-done' : ''} aria-current={index === step ? 'step' : undefined}>
                 <span aria-hidden="true">{index + 1}</span><small>{label}</small>
