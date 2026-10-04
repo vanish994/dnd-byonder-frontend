@@ -46,12 +46,12 @@ export function Game() {
             {session.availableActions.length > 0 && <section className="available-actions" aria-labelledby="available-actions-title">
               <div className="available-actions__heading">
                 <div>
-                  <span className="section-kicker"><span className="kicker-line" /> Escolhas do Mestre</span>
-                  <h2 id="available-actions-title">Ações disponíveis</h2>
+                  <span className="section-kicker"><span className="kicker-line" /> Sugestões do Mestre</span>
+                  <h2 id="available-actions-title">Ideias para este momento</h2>
                 </div>
                 <span className="available-actions__count">{session.availableActions.length}</span>
               </div>
-              <p className="available-actions__hint">Escolha uma opção abaixo ou descreva livremente o que deseja fazer.</p>
+                  <p className="available-actions__hint">Use uma sugestão ou descreva livremente o que seu personagem tenta fazer.</p>
               {session.availableActions.map((action, index) => <StructuredActionCard
                 key={`${String(action.type)}-${index}`}
                 action={action}

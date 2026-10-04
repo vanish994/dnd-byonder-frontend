@@ -175,7 +175,7 @@ describe('criação guiada e sessão', () => {
     const firstTurn = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/v1/game/turn'))
     expect(JSON.parse(firstTurn?.[1]?.body as string)).toEqual({ campaign_id: 'campaign-created', state: { character },
       player_input: 'Começar a aventura.', action: null, available_actions: [action] })
-    fireEvent.click(screen.getByRole('button', { name: 'Executar ação' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Usar sugestão' }))
     await screen.findByText('O Mestre responde ao seu gesto.')
     const turns = fetchMock.mock.calls.filter(([url]) => String(url).endsWith('/v1/game/turn'))
     expect(JSON.parse(turns[1][1]?.body as string).action).toEqual(action)
@@ -199,7 +199,7 @@ describe('criação guiada e sessão', () => {
     expect(screen.getByRole('heading', { name: 'Orientação para este turno' })).toBeInTheDocument()
     expect(screen.getByText('O resultado é resolvido pelo Mestre.')).toBeInTheDocument()
     expect(screen.getByText('A mecânica foi resolvida; a narração está temporariamente indisponível.')).toBeInTheDocument()
-    expect(screen.getAllByRole('button', { name: 'Executar ação' })).toHaveLength(1)
+    expect(screen.getAllByRole('button', { name: 'Usar sugestão' })).toHaveLength(1)
   })
 
   it('preserva escolhas e permite repetir carregamento e validação após erros seguros do Gateway', async () => {

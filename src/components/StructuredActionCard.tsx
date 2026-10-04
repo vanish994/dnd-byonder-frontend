@@ -22,9 +22,9 @@ export function StructuredActionCard({ action, isLoading, onSubmit }: Structured
   }
 
   return (
-    <section className="structured-action-card" aria-label="Ações estruturadas disponíveis">
+      <section className="structured-action-card" aria-label="Sugestões do Mestre">
       <div className="structured-action-card__copy">
-        <span className="section-kicker"><span className="kicker-line" /> Ação disponível</span>
+        <span className="section-kicker"><span className="kicker-line" /> Sugestão do Mestre</span>
         <h3>{label}</h3>
         {description && <p>{description}</p>}
         {isMove && <label className="move-distance">Distância <input aria-label="Distância do movimento" type="number" min="0" step="1" value={distance} onChange={(event) => setDistance(event.target.value)} /></label>}
@@ -36,7 +36,7 @@ export function StructuredActionCard({ action, isLoading, onSubmit }: Structured
         disabled={isLoading || !canSubmit}
       >
         {isLoading ? <span className="button-spinner" aria-label="Enviando" /> : <span aria-hidden="true">✦</span>}
-        <span>{isLoading ? 'Enviando' : 'Executar ação'}</span>
+        <span>{isLoading ? 'Enviando' : 'Usar sugestão'}</span>
       </button>
     </section>
   )
