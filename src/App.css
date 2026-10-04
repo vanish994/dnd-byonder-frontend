@@ -283,7 +283,7 @@
 /* Gate 3 — adventure surface: keep the page stable while the story grows. */
 .game-layout { min-height: calc(100dvh - 92px); }
 .story-column { display: flex; flex-direction: column; min-height: 0; }
-.narrative-panel { display: flex; flex-direction: column; height: clamp(360px, 52dvh, 640px); min-width: 0; overflow: hidden; }
+.narrative-panel { display: flex; flex: 0 0 clamp(360px, 52dvh, 640px); flex-direction: column; height: clamp(360px, 52dvh, 640px); min-width: 0; overflow: hidden; }
 .narrative-history {
   flex: 1 1 auto;
   min-height: 0;
@@ -324,15 +324,17 @@
   .character-stats { gap: 15px; }
   .hp-track { margin-top: 9px; }
   .character-equipment, .character-footer { display: none; }
-  .story-column { flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; padding: 0 2px 20px 0; scrollbar-color: var(--bronze) rgba(239, 230, 212, .06); scrollbar-width: thin; }
-  .narrative-panel { height: clamp(280px, 38dvh, 420px); }
+  .story-column { display: flex; flex: 1 1 auto; flex-direction: column; overflow: hidden; padding: 0 2px 20px 0; }
+  .narrative-panel { flex-basis: clamp(280px, 38dvh, 420px); height: clamp(280px, 38dvh, 420px); padding: 14px 14px 0; background: rgba(18, 21, 23, .82); border: 1px solid var(--line); border-top-color: var(--line-bright); box-shadow: var(--shadow-deep); }
   .narrative-history { min-height: 0; padding-right: 8px; }
-  .narrative-entry { padding: 18px 0; }
-  .narrative-entry p { font-size: 15px; line-height: 1.65; }
-  .narrative-heading-row { margin-bottom: 20px; }
-  .narrative-panel h1 { font-size: clamp(2rem, 10vw, 3.4rem); }
-  .scene-description { margin-bottom: 19px; }
-  .turn-controls { padding-bottom: 4px; }
+  .narrative-entry { padding: 15px 0; }
+  .narrative-entry p { font-size: 14px; line-height: 1.55; }
+  .narrative-heading-row { margin-bottom: 12px; }
+  .narrative-panel h1 { margin-top: 10px; font-size: clamp(1.65rem, 8vw, 2.5rem); }
+  .chapter-label { display: none; }
+  .scene-banner { margin-bottom: 10px; padding-bottom: 10px; }
+  .scene-description { max-height: 3.1em; margin-bottom: 10px; overflow-y: auto; }
+  .turn-controls { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 8px 4px 0; scrollbar-color: var(--bronze) rgba(239, 230, 212, .06); scrollbar-width: thin; }
   .loading-state { padding: 16px 0; }
   .combat-panel { margin: 16px 0; padding: 13px; }
   .resolution-card { margin: 16px 0 20px; }
@@ -340,10 +342,13 @@
   .rule-teaching-panel__intro { margin-top: 8px; font-size: 11px; }
   .rule-teaching-panel__tips { gap: 9px; margin-top: 12px; padding-top: 12px; }
   .rule-teaching-panel__tips li { font-size: 11px; }
-  .available-actions { margin-top: 17px; padding-top: 15px; }
-  .available-actions__heading h2 { font-size: 19px; }
-  .available-actions__hint { font-size: 11px; }
-  .available-actions .structured-action-card { margin-top: 11px; }
+  .available-actions { margin-top: 12px; padding-top: 12px; }
+  .available-actions__heading h2 { font-size: 17px; }
+  .available-actions__hint { display: none; }
+  .available-actions .structured-action-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; margin-top: 8px; padding: 12px 13px; }
+  .available-actions .structured-action-card__copy h3 { margin: 6px 0 3px; font-size: 14px; }
+  .available-actions .structured-action-card__copy p { font-size: 10px; line-height: 1.35; }
+  .available-actions .structured-action-card__button { min-height: 36px; padding: 0 10px; font-size: 9px; }
   .action-zone { margin-top: 18px; padding-top: 16px; }
   .action-heading h2 { font-size: 21px; }
   .composer-row textarea { font-size: 16px; }
