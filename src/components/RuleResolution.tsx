@@ -1,4 +1,5 @@
 import type { RuleResolution } from '../types/game'
+import { DiceRollAnimation } from './DiceRollAnimation'
 
 interface RuleResolutionProps {
   resolution: RuleResolution | null
@@ -25,6 +26,7 @@ export function RuleResolution({ resolution }: RuleResolutionProps) {
   const turnOrder = Array.isArray(resolution.outcome?.turn_order)
     ? resolution.outcome.turn_order.filter((entry): entry is string => typeof entry === 'string')
     : []
+  const animationKey = [resolution.action?.type ?? 'unknown', roll ?? 'unknown', resolution.outcome?.round ?? '', resolution.outcome?.turn_index ?? '', currentActor ?? ''].join(':')
 
   return (
     <section className={`resolution-card ${success === undefined ? '' : success ? 'is-success' : 'is-failure'}`} aria-label="Resultado mecânico">
@@ -33,11 +35,11 @@ export function RuleResolution({ resolution }: RuleResolutionProps) {
         <span className="resolution-rule">{resolution.rules_used?.[0] ?? 'rule-resolution-v1'}</span>
       </div>
       <div className="resolution-main">
-        <div className="die-result" aria-label={`Rolagem d20: ${typeof roll === 'number' ? roll : 'não informada'}`}>
+        <DiceRollAnimation key={animationKey} ariaLabel={`Rolagem d20: ${typeof roll === 'number' ? roll : 'não informada'}`}>
           <span className="die-label">d20</span>
           <strong>{typeof roll === 'number' ? roll : '—'}</strong>
           <span className="die-spark">✦</span>
-        </div>
+        </DiceRollAnimation>
         <div className="resolution-copy">
           <div className="resolution-title-row">
             <h2>{isInitiative ? 'Combate iniciado' : `Teste de ${abilityLabel}`}</h2>
