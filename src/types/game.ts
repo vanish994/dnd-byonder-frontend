@@ -93,6 +93,7 @@ export interface RuleResolution {
 export interface GameTurnResponse {
   campaign_id: string
   narration: string
+  narration_status: 'available' | 'unavailable'
   rule_resolution: RuleResolution
   state: GameState
   available_actions: StructuredAction[]

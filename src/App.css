@@ -90,6 +90,13 @@
 .structured-action-card__button { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 42px; padding: 0 15px; color: var(--void); background: var(--bronze-light); border: 0; border-radius: 2px; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; transition: background .2s, transform .2s, box-shadow .2s; }
 .structured-action-card__button:hover:not(:disabled) { background: var(--amber); box-shadow: 0 8px 25px rgba(211, 154, 82, .14); transform: translateY(-2px); }
 .structured-action-card__button:disabled { cursor: wait; opacity: .55; }
+.scene-description { margin: -16px 0 28px; color: var(--paper-muted); font: 400 14px/1.7 'Libre Baskerville', Georgia, serif; }
+.combat-panel { margin: 30px 0; padding: 18px; background: rgba(31, 27, 23, .72); border: 1px solid rgba(211, 154, 82, .28); border-left: 2px solid var(--bronze-light); }
+.combat-panel > p { margin: 12px 0 0; color: var(--paper-muted); font-size: 12px; }
+.combat-panel__cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 9px; margin-top: 15px; }
+.combatant-card { display: grid; gap: 5px; padding: 11px; color: var(--ash); background: rgba(17, 19, 22, .68); border: 1px solid var(--line); font-size: 10px; }
+.combatant-card strong { color: var(--paper); font: 500 14px 'Cinzel', Georgia, serif; }
+.combatant-card span { color: var(--paper-muted); }
 .action-zone { margin-top: 43px; padding: 23px 0 0; border-top: 1px solid var(--line-bright); }
 .action-heading { display: flex; justify-content: space-between; align-items: start; }
 .action-heading h2 { margin: 10px 0 0; color: var(--paper); font: 500 25px 'Cinzel', Georgia, serif; }
@@ -233,6 +240,13 @@
 .wizard-button:disabled { opacity: .5; }
 .error-retry { min-height: 40px; margin-top: 12px; padding: 8px 12px; border: 1px solid currentColor; background: transparent; color: var(--paper); }
 .narrative-empty { padding: 24px 0; color: var(--paper-muted); font-size: 13px; }
+@media (max-width: 720px) {
+  .game-header, .game-layout, .app-footer { width: min(100% - 36px, 785px); }
+  .game-layout { display: block; padding-top: 36px; }
+  .sidebar-column { margin-top: 30px; }
+  .narrative-heading-row { display: block; margin-bottom: 28px; }
+  .chapter-label { justify-items: start; margin-top: 20px; text-align: left; }
+}
 @media (min-width: 640px) {
   .wizard-layout { width: min(900px, calc(100% - 56px)); padding-top: 64px; }
   .wizard-options--grid, .wizard-attributes { grid-template-columns: repeat(2, minmax(0, 1fr)); }

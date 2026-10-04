@@ -14,6 +14,7 @@ export function useGameSession() {
   const [availableActions, setAvailableActions] = useState<StructuredAction[]>([])
   const [history, setHistory] = useState<NarrativeEntry[]>([])
   const [ruleResolution, setRuleResolution] = useState<RuleResolution | null>(null)
+  const [narrationStatus, setNarrationStatus] = useState<'available' | 'unavailable'>('available')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<GameApiError | null>(null)
   const [failedTurn, setFailedTurn] = useState<{ text: string; action: StructuredAction | null; opening: boolean } | null>(null)
@@ -44,6 +45,7 @@ export function useGameSession() {
       setState(response.state)
       setAvailableActions(response.available_actions)
       setRuleResolution(response.rule_resolution)
+      setNarrationStatus(response.narration_status)
       setHistory((entries) => [...entries, { id: `master-${Date.now()}`, speaker: 'mestre', text: response.narration, timestamp: Date.now() }])
       return true
     } catch (requestError) {
@@ -81,8 +83,8 @@ export function useGameSession() {
     : Promise.resolve(false), [failedTurn, runTurn])
 
   return useMemo(() => ({
-    campaignId, hasSession, state, character, classLabel, derived, availableActions, history, ruleResolution,
+    campaignId, hasSession, state, character, classLabel, derived, availableActions, history, ruleResolution, narrationStatus,
     isLoading, error, failedTurn, startSession, sendAction, retryTurn,
-  }), [campaignId, hasSession, state, character, classLabel, derived, availableActions, history, ruleResolution,
+  }), [campaignId, hasSession, state, character, classLabel, derived, availableActions, history, ruleResolution, narrationStatus,
     isLoading, error, failedTurn, startSession, sendAction, retryTurn])
 }

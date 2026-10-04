@@ -36,6 +36,7 @@ const resolution = { schema_version: 'rule-resolution-v1', status: 'resolved', a
 const created = { character, derived, state: { character }, available_actions: [], campaign_id: 'real-campaign-id', rule_resolution: resolution }
 const turn = {
   campaign_id: 'real-campaign-id', narration: 'Uma taverna surge no caminho.',
+  narration_status: 'unavailable',
   rule_resolution: { schema_version: 'rule-resolution-v1', status: 'needs_rule_validation', reason: 'not bound' },
   state: { character, scene: 'taverna' }, available_actions: [],
 }
@@ -76,7 +77,9 @@ describe('Gateway public game API', () => {
   it('propaga state e available_actions reais sem inventar uma ação mecânica no turno', async () => {
     vi.stubEnv('VITE_GAME_API_URL', 'https://gateway.example.com')
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(json(turn))
-    expect((await sendGameTurn(request)).narration).toBe('Uma taverna surge no caminho.')
+    const response = await sendGameTurn(request)
+    expect(response.narration).toBe('Uma taverna surge no caminho.')
+    expect(response.narration_status).toBe('unavailable')
     expect(fetchMock).toHaveBeenCalledWith('https://gateway.example.com/v1/game/turn', expect.objectContaining({ method: 'POST', body: JSON.stringify(request) }))
   })
 

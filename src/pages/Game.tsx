@@ -1,4 +1,5 @@
 import { ActionInput } from '../components/ActionInput'
+import { CombatPanel } from '../components/CombatPanel'
 import { CharacterSummary } from '../components/CharacterSummary'
 import { CharacterWizard } from '../components/CharacterWizard'
 import { GameHeader } from '../components/GameHeader'
@@ -27,8 +28,9 @@ export function Game() {
           <div className="sidebar-note"><span className="note-mark" aria-hidden="true">✦</span><p><strong>Jogue no seu ritmo.</strong><br />O Mestre responde ao que você imagina.</p></div>
         </aside>
         <div className="story-column">
-          <NarrativePanel history={session.history} state={session.state} />
+          <NarrativePanel history={session.history} state={session.state} narrationStatus={session.narrationStatus} />
           {session.isLoading && <LoadingState />}
+          <CombatPanel state={session.state} />
           <RuleResolution resolution={session.ruleResolution} />
           {session.error && (
             <div className="error-banner" role="alert">

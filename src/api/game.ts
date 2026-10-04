@@ -162,10 +162,12 @@ function parseCreation(value: unknown): CharacterCreation {
 
 function parseTurn(value: unknown): GameTurnResponse {
   if (!record(value) || typeof value.campaign_id !== 'string' || !value.campaign_id ||
-    typeof value.narration !== 'string' || !record(value.state)) {
+    typeof value.narration !== 'string' || !record(value.state) ||
+    (value.narration_status !== undefined && value.narration_status !== 'available' && value.narration_status !== 'unavailable')) {
     invalid('um turno')
   }
-  return { campaign_id: value.campaign_id, narration: value.narration, state: value.state,
+  return { campaign_id: value.campaign_id, narration: value.narration, narration_status: value.narration_status ?? 'available',
+    state: value.state,
     available_actions: actions(value.available_actions), rule_resolution: parseResolution(value.rule_resolution) }
 }
 
