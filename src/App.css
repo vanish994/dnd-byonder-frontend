@@ -399,3 +399,49 @@
 }
 
 .narrative-entry p { white-space: pre-wrap; }
+
+/* Mobile character creation: one viewport, dense steps, no document scroll. */
+@media (max-width: 760px) {
+  .wizard-layout { overflow: hidden; padding: 8px 0; }
+  .wizard { min-height: 0; }
+  .wizard-intro { margin-bottom: 8px; }
+  .wizard-intro h1 { margin: 5px 0; font-size: clamp(1.45rem, 7vw, 2.1rem); }
+  .wizard-intro p { display: none; }
+  .wizard-panel, .wizard-notice { max-height: 100%; overflow: hidden; padding: 12px; }
+  .wizard-progress { font-size: 9px; }
+  .wizard-steps { gap: 2px; margin: 9px 0 12px; }
+  .wizard-steps li { gap: 3px; padding-top: 5px; font-size: 9px; }
+  .wizard-steps li span { font-size: 13px; }
+  .wizard-steps li small { font-size: 8px; }
+  .wizard-step h2 { margin-bottom: 6px; font-size: 1.2rem; }
+  .wizard-step > p { margin-bottom: 10px; font-size: 11px; line-height: 1.35; }
+  .wizard-label { margin: 8px 0 5px; font-size: 10px; }
+  .wizard-text, .wizard-step select { min-height: 36px; padding: 7px 9px; font-size: 12px; }
+  .wizard-help { margin-top: 6px; font-size: 9px; }
+  .wizard-options { gap: 5px; }
+  .wizard-options--grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .wizard-choice { gap: 7px; min-height: 38px; padding: 8px; }
+  .wizard-choice input { width: 15px; height: 15px; }
+  .wizard-choice strong { font-size: 10px; }
+  .wizard-choice small { display: none; }
+  .wizard-attributes { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .wizard-attribute { gap: 2px; padding: 7px; }
+  .wizard-attribute label { font-size: 10px; }
+  .wizard-attribute small { display: none; }
+  .wizard-attribute select { min-height: 32px; margin-top: 2px; padding: 5px 6px; font-size: 10px; }
+  .wizard-summary { gap: 10px; }
+  .wizard-summary-identity { gap: 3px; }
+  .wizard-summary-identity strong { font-size: 18px; }
+  .wizard-summary-identity > span:last-child { font-size: 10px; }
+  .wizard-summary-stats { gap: 5px; }
+  .wizard-summary-stats > span { gap: 2px; padding: 7px; }
+  .wizard-summary-stats small { font-size: 8px; }
+  .wizard-summary-stats strong { font-size: 14px; }
+  .wizard-summary-section { padding-top: 8px; }
+  .wizard-summary-section h3 { margin-bottom: 5px; font-size: 11px; }
+  .wizard-summary-section dl { gap: 3px; }
+  .wizard-summary-section dl > div { font-size: 10px; }
+  .wizard-summary-section dd small { font-size: 9px; }
+  .wizard-controls { gap: 6px; margin-top: 12px; padding-top: 10px; }
+  .wizard-button { min-height: 36px; padding: 7px 10px; font-size: 10px; }
+}
