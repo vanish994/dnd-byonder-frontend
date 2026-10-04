@@ -83,6 +83,36 @@ describe('Gateway public game API', () => {
     expect(fetchMock).toHaveBeenCalledWith('https://gateway.example.com/v1/game/turn', expect.objectContaining({ method: 'POST', body: JSON.stringify(request) }))
   })
 
+  it('consome rule-teaching-v1 sem alterar os campos mecânicos ou as ações autorizadas', async () => {
+    vi.stubEnv('VITE_GAME_API_URL', 'https://gateway.example.com')
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(json({
+      ...turn,
+      available_actions: [{ type: 'ability_check', ability: 'strength' }],
+      rule_teaching: { schema_version: 'rule-teaching-v1', tips: [{ id: 'check', title: 'Testes', text: 'O Mestre resolve o resultado.' }] },
+    }))
+
+    const response = await sendGameTurn(request)
+
+    expect(response.rule_teaching).toEqual({ schema_version: 'rule-teaching-v1', tips: [{ id: 'check', title: 'Testes', text: 'O Mestre resolve o resultado.' }] })
+    expect(response.rule_resolution).toEqual(turn.rule_resolution)
+    expect(response.state).toEqual(turn.state)
+    expect(response.available_actions).toEqual([{ type: 'ability_check', ability: 'strength' }])
+    expect(response.narration).toBe(turn.narration)
+    expect(response.narration_status).toBe(turn.narration_status)
+  })
+
+  it('trata rule_teaching ausente, nulo ou vazio como nenhuma orientação', async () => {
+    vi.stubEnv('VITE_GAME_API_URL', 'https://gateway.example.com')
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(json(turn))
+      .mockResolvedValueOnce(json({ ...turn, rule_teaching: null }))
+      .mockResolvedValueOnce(json({ ...turn, rule_teaching: { schema_version: 'rule-teaching-v1', tips: [] } }))
+
+    await expect(sendGameTurn(request)).resolves.toMatchObject({ rule_teaching: null })
+    await expect(sendGameTurn(request)).resolves.toMatchObject({ rule_teaching: null })
+    await expect(sendGameTurn(request)).resolves.toMatchObject({ rule_teaching: null })
+  })
+
   it('rejeita envelopes externos malformados em vez de aceitar qualquer objeto truthy', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(json({ ...catalog, abilities: 'broken' }))
       .mockResolvedValueOnce(json({ valid: true, derived: { hp: 11 } }))

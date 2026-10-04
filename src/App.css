@@ -60,6 +60,16 @@
 .new-mark { padding: 3px 7px; color: var(--amber); border: 1px solid rgba(237, 180, 94, .28); font-size: 8px; letter-spacing: .12em; }
 .narrative-entry p { margin: 0; color: var(--paper); font: 400 clamp(1.04rem, 1.6vw, 1.28rem)/1.75 'Libre Baskerville', Georgia, serif; }
 .narrative-entry--voce p { color: var(--paper-muted); font-family: 'DM Sans', sans-serif; font-size: 14px; line-height: 1.65; }
+.rule-teaching-panel { margin: 28px 0 30px; padding: 20px 21px; background: rgba(30, 36, 32, .72); border: 1px solid rgba(125, 150, 109, .34); border-left: 2px solid var(--moss); box-shadow: 0 14px 35px rgba(0, 0, 0, .16); animation: reveal .5s ease both; }
+.rule-teaching-panel__heading { display: flex; align-items: start; justify-content: space-between; gap: 18px; }
+.rule-teaching-panel__heading h2 { margin: 9px 0 0; color: var(--paper); font: 500 18px 'Cinzel', Georgia, serif; }
+.rule-teaching-panel__mark { color: var(--moss); font-size: 20px; }
+.rule-teaching-panel__intro { max-width: 62ch; margin: 12px 0 0; color: var(--paper-muted); font-size: 12px; line-height: 1.55; }
+.rule-teaching-panel__tips { display: grid; gap: 13px; margin: 18px 0 0; padding: 16px 0 0; border-top: 1px solid rgba(125, 150, 109, .2); list-style: none; }
+.rule-teaching-panel__tips li { display: flex; align-items: start; gap: 11px; color: var(--paper-muted); font-size: 12px; line-height: 1.55; }
+.rule-teaching-panel__bullet { flex: 0 0 21px; display: grid; place-items: center; width: 21px; height: 21px; color: var(--void); background: var(--moss); border-radius: 50%; font-size: 10px; font-weight: 700; }
+.rule-teaching-panel__tips strong { display: block; margin-bottom: 2px; color: var(--paper); font-size: 12px; }
+.rule-teaching-panel__tips p { margin: 0; }
 .loading-state { display: flex; align-items: center; gap: 12px; padding: 25px 0; color: var(--amber); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
 .loading-glyph { animation: spin 1.5s linear infinite; }
 .resolution-card { margin: 30px 0 38px; padding: 22px; background: linear-gradient(135deg, rgba(32, 35, 35, .94), rgba(20, 22, 23, .93)); border: 1px solid var(--line); border-top: 1px solid var(--line-bright); border-radius: 2px; box-shadow: var(--shadow-deep); animation: reveal .5s ease both; }

@@ -95,6 +95,17 @@ export interface RuleResolution {
   [key: string]: unknown
 }
 
+export interface RuleTeachingTip {
+  id?: string
+  title?: string
+  text: string
+}
+
+export interface RuleTeaching {
+  schema_version: 'rule-teaching-v1'
+  tips: RuleTeachingTip[]
+}
+
 export interface GameTurnResponse {
   campaign_id: string
   narration: string
@@ -102,6 +113,7 @@ export interface GameTurnResponse {
   rule_resolution: RuleResolution
   state: GameState
   available_actions: StructuredAction[]
+  rule_teaching: RuleTeaching | null
 }
 
 export interface NarrativeEntry {

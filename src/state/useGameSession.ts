@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { GameApiError, sendGameTurn } from '../api/game'
-import type { CharacterCreation, DerivedCharacter, GameState, NarrativeEntry, RuleResolution, StructuredAction } from '../types/game'
+import type { CharacterCreation, DerivedCharacter, GameState, NarrativeEntry, RuleResolution, RuleTeaching, StructuredAction } from '../types/game'
 
 const openingInput = 'Começar a aventura.'
 
@@ -14,6 +14,7 @@ export function useGameSession() {
   const [availableActions, setAvailableActions] = useState<StructuredAction[]>([])
   const [history, setHistory] = useState<NarrativeEntry[]>([])
   const [ruleResolution, setRuleResolution] = useState<RuleResolution | null>(null)
+  const [ruleTeaching, setRuleTeaching] = useState<RuleTeaching | null>(null)
   const [narrationStatus, setNarrationStatus] = useState<'available' | 'unavailable'>('available')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<GameApiError | null>(null)
@@ -45,6 +46,7 @@ export function useGameSession() {
       setState(response.state)
       setAvailableActions(response.available_actions)
       setRuleResolution(response.rule_resolution)
+      setRuleTeaching(response.rule_teaching)
       setNarrationStatus(response.narration_status)
       setHistory((entries) => [...entries, { id: `master-${Date.now()}`, speaker: 'mestre', text: response.narration, timestamp: Date.now() }])
       return true
@@ -68,6 +70,7 @@ export function useGameSession() {
     setDerived(created.derived ?? null)
     setAvailableActions(created.available_actions)
     setRuleResolution(created.rule_resolution)
+    setRuleTeaching(null)
     setHistory([])
     setHasSession(true)
     return runTurn(openingInput, null, true)
@@ -83,8 +86,8 @@ export function useGameSession() {
     : Promise.resolve(false), [failedTurn, runTurn])
 
   return useMemo(() => ({
-    campaignId, hasSession, state, character, classLabel, derived, availableActions, history, ruleResolution, narrationStatus,
+    campaignId, hasSession, state, character, classLabel, derived, availableActions, history, ruleResolution, ruleTeaching, narrationStatus,
     isLoading, error, failedTurn, startSession, sendAction, retryTurn,
-  }), [campaignId, hasSession, state, character, classLabel, derived, availableActions, history, ruleResolution, narrationStatus,
+  }), [campaignId, hasSession, state, character, classLabel, derived, availableActions, history, ruleResolution, ruleTeaching, narrationStatus,
     isLoading, error, failedTurn, startSession, sendAction, retryTurn])
 }

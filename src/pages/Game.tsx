@@ -6,6 +6,7 @@ import { GameHeader } from '../components/GameHeader'
 import { LoadingState } from '../components/LoadingState'
 import { NarrativePanel } from '../components/NarrativePanel'
 import { RuleResolution } from '../components/RuleResolution'
+import { RuleTeachingPanel } from '../components/RuleTeachingPanel'
 import { StructuredActionCard } from '../components/StructuredActionCard'
 import { useGameSession } from '../state/useGameSession'
 
@@ -29,6 +30,7 @@ export function Game() {
         </aside>
         <div className="story-column">
           <NarrativePanel history={session.history} state={session.state} narrationStatus={session.narrationStatus} />
+          <RuleTeachingPanel teaching={session.ruleTeaching} />
           {session.isLoading && <LoadingState />}
           <CombatPanel state={session.state} />
           <RuleResolution resolution={session.ruleResolution} />

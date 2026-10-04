@@ -1,6 +1,6 @@
 import type {
   CatalogItem, CharacterClassOption, CharacterCreation, CharacterDraft, CharacterOptions,
-  CharacterValidation, DerivedCharacter, GameTurnRequest, GameTurnResponse, RuleResolution,
+  CharacterValidation, DerivedCharacter, GameTurnRequest, GameTurnResponse, RuleResolution, RuleTeaching, RuleTeachingTip,
 } from '../types/game'
 
 const PUBLIC_GATEWAY_URL = 'https://dnd-byonder-gateway.onrender.com'
@@ -131,6 +131,28 @@ function parseResolution(value: unknown): RuleResolution {
   return value as unknown as RuleResolution
 }
 
+function parseRuleTeaching(value: unknown): RuleTeaching | null {
+  if (value === undefined || value === null) return null
+  if (!record(value)) invalid('orientações de jogo')
+  if (!Object.keys(value).length) return null
+  if (value.schema_version !== 'rule-teaching-v1' || !Array.isArray(value.tips)) invalid('orientações de jogo')
+
+  const tips = value.tips.flatMap((raw: unknown): RuleTeachingTip[] => {
+    if (typeof raw === 'string') return raw.trim() ? [{ text: raw.trim() }] : []
+    if (!record(raw)) return []
+    const text = ['text', 'body', 'description', 'content', 'message']
+      .map((key) => raw[key])
+      .find((item): item is string => typeof item === 'string' && Boolean(item.trim()))
+    if (!text) return []
+    return [{
+      ...(typeof raw.id === 'string' && raw.id ? { id: raw.id } : {}),
+      ...(typeof raw.title === 'string' && raw.title ? { title: raw.title } : {}),
+      text: text.trim(),
+    }]
+  })
+  return tips.length ? { schema_version: 'rule-teaching-v1', tips } : null
+}
+
 function parseValidation(value: unknown): CharacterValidation {
   if (!record(value) || value.valid !== true || !record(value.character) ||
     typeof value.character.name !== 'string' || !numbers(value.character.abilities)) invalid('a validação do personagem')
@@ -168,7 +190,8 @@ function parseTurn(value: unknown): GameTurnResponse {
   }
   return { campaign_id: value.campaign_id, narration: value.narration, narration_status: value.narration_status ?? 'available',
     state: value.state,
-    available_actions: actions(value.available_actions), rule_resolution: parseResolution(value.rule_resolution) }
+    available_actions: actions(value.available_actions), rule_resolution: parseResolution(value.rule_resolution),
+    rule_teaching: parseRuleTeaching(value.rule_teaching) }
 }
 
 async function request(path: string, payload?: unknown, signal?: AbortSignal): Promise<unknown> {

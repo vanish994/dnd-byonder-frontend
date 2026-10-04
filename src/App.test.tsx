@@ -28,7 +28,23 @@ const resolution = { schema_version: 'rule-resolution-v1', status: 'resolved', a
 const action = { type: 'ability_check', ability: 'strength', dc: 12, modifier: 2 }
 const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json' } })
 
-function mockGateway({ failOptions = false, failValidate = false, failCreate = false, failTurn = false, actions = [] as Array<Record<string, unknown>> } = {}) {
+function mockGateway({
+  failOptions = false,
+  failValidate = false,
+  failCreate = false,
+  failTurn = false,
+  actions = [] as Array<Record<string, unknown>>,
+  ruleTeaching,
+  narrationStatus = 'available',
+}: {
+  failOptions?: boolean
+  failValidate?: boolean
+  failCreate?: boolean
+  failTurn?: boolean
+  actions?: Array<Record<string, unknown>>
+  ruleTeaching?: unknown
+  narrationStatus?: 'available' | 'unavailable'
+} = {}) {
   let optionsRequests = 0
   let validations = 0
   let creations = 0
@@ -54,8 +70,10 @@ function mockGateway({ failOptions = false, failValidate = false, failCreate = f
       turns++
       if (failTurn && turns === 1) return json({ error: { message: 'upstream secret' } }, 502)
       return json({ campaign_id: 'campaign-created', narration: turns === 1 ? 'A aventura começou.' : 'O Mestre responde ao seu gesto.',
+        narration_status: narrationStatus,
         rule_resolution: { schema_version: 'rule-resolution-v1', status: 'needs_rule_validation' },
-        state: { character, scene: 'abertura' }, available_actions: actions })
+        state: { character, scene: 'abertura' }, available_actions: actions,
+        ...(ruleTeaching !== undefined ? { rule_teaching: ruleTeaching } : {}) })
     }
     throw new Error(`Rota inesperada: ${path}`)
   })
@@ -162,6 +180,26 @@ describe('criação guiada e sessão', () => {
     const turns = fetchMock.mock.calls.filter(([url]) => String(url).endsWith('/v1/game/turn'))
     expect(JSON.parse(turns[1][1]?.body as string).action).toEqual(action)
     expect(JSON.parse(turns[1][1]?.body as string).available_actions).toEqual([action])
+  })
+
+  it('mostra a orientação mesmo quando a narrativa falha e mantém as ações do Backend como autoridade', async () => {
+    mockGateway({
+      actions: [action],
+      narrationStatus: 'unavailable',
+      ruleTeaching: {
+        schema_version: 'rule-teaching-v1',
+        tips: [{ id: 'check', title: 'Testes de habilidade', text: 'O resultado é resolvido pelo Mestre.' }],
+      },
+    })
+    render(<App />)
+    await toSummary()
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar personagem' }))
+
+    expect(await screen.findByText('A aventura começou.')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Orientação para este turno' })).toBeInTheDocument()
+    expect(screen.getByText('O resultado é resolvido pelo Mestre.')).toBeInTheDocument()
+    expect(screen.getByText('A mecânica foi resolvida; a narração está temporariamente indisponível.')).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Executar ação' })).toHaveLength(1)
   })
 
   it('preserva escolhas e permite repetir carregamento e validação após erros seguros do Gateway', async () => {
