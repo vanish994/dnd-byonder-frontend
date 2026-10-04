@@ -1,13 +1,78 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import { createCharacter, GameApiError, loadCharacterOptions, validateCharacter } from '../api/game'
-import type { CharacterClassOption, CharacterCreation, CharacterDraft, CharacterOptions, CharacterValidation } from '../types/game'
+import { createPHB2024Character, GameApiError, loadPHB2024CharacterOptions, validatePHB2024Character } from '../api/game'
+import type {
+  CharacterCreation,
+  CharacterValidation,
+  PHB2024BackgroundOption,
+  PHB2024CharacterDraft,
+  PHB2024CharacterOptions,
+  PHB2024EquipmentPackage,
+  PHB2024SpeciesOption,
+} from '../types/game'
 
 interface CharacterWizardProps {
   onCreated: (created: CharacterCreation, classLabel: string) => Promise<boolean>
 }
 
-const steps = ['Nome', 'Classe', 'Atributos', 'Perícias', 'Equipamento', 'Resumo']
+const steps = ['Nome', 'Classe', 'Espécie', 'Origem', 'Atributos', 'Perícias', 'Itens', 'Resumo']
+const ABILITY_NAMES: Record<string, string> = {
+  strength: 'Força', dexterity: 'Destreza', constitution: 'Constituição',
+  intelligence: 'Inteligência', wisdom: 'Sabedoria', charisma: 'Carisma',
+}
+const SKILL_NAMES: Record<string, string> = {
+  acrobatics: 'Acrobacia', animal_handling: 'Lidar com Animais', arcana: 'Arcanismo', athletics: 'Atletismo',
+  deception: 'Enganação', history: 'História', insight: 'Intuição', intimidation: 'Intimidação',
+  investigation: 'Investigação', medicine: 'Medicina', nature: 'Natureza', perception: 'Percepção',
+  performance: 'Atuação', persuasion: 'Persuasão', religion: 'Religião', sleight_of_hand: 'Prestidigitação',
+  stealth: 'Furtividade', survival: 'Sobrevivência',
+}
+const OPTION_NAMES: Record<string, string> = {
+  small: 'Pequeno', medium: 'Médio', black: 'Preto', blue: 'Azul', brass: 'Latão', bronze: 'Bronze',
+  copper: 'Cobre', gold: 'Ouro', green: 'Verde', red: 'Vermelho', silver: 'Prata', white: 'Branco', abyssal: 'Abissal',
+  drow: 'Drow', high_elf: 'Alto Elfo', wood_elf: 'Elfo da Floresta', forest_gnome: 'Gnomo da Floresta',
+  rock_gnome: 'Gnomo das Rochas', cloud: 'Nuvem', fire: 'Fogo', frost: 'Gelo', hill: 'Colina',
+  stone: 'Pedra', storm: 'Tempestade', chthonic: 'Ctônico', infernal: 'Infernal',
+  alert: 'Alerta', crafter: 'Artesão', healer: 'Curandeiro', lucky: 'Sortudo', tavern_brawler: 'Brigão de Taverna', magic_initiate_cleric: 'Iniciado em Magia (Clérigo)',
+  magic_initiate_druid: 'Iniciado em Magia (Druida)', magic_initiate_wizard: 'Iniciado em Magia (Mago)',
+  musician: 'Músico', savage_attacker: 'Atacante Selvagem', skilled: 'Habilidoso', tough: 'Robusto',
+  intelligence: 'Inteligência', wisdom: 'Sabedoria', charisma: 'Carisma', strength: 'Força',
+  dexterity: 'Destreza', constitution: 'Constituição',
+}
+const METHOD_LABELS: Record<string, string> = {
+  standard_array: 'Valores Padrão', point_buy: 'Compra por Pontos', rolled: 'Rolagem de Dados',
+}
+const CHOICE_FIELD_NAMES: Record<string, string> = {
+  size: 'Tamanho', draconic_ancestry: 'Ancestralidade dracônica', elven_lineage: 'Linhagem élfica',
+  spellcasting_ability: 'Atributo de conjuração', keen_senses_skill: 'Perícia de Sentidos Aguçados',
+  gnomish_lineage: 'Linhagem gnômica', giant_ancestry: 'Ancestralidade gigante',
+  skillful_skill: 'Perícia de Habilidoso', versatile_feat: 'Talento versátil', fiendish_legacy: 'Legado ínfero',
+}
+
+type AbilityMap = Record<string, number>
+type BonusMode = 'two_one' | 'three_one'
+
+function displayId(value: string) {
+  return value.split('_').map((part) => part ? part[0].toUpperCase() + part.slice(1) : '').join(' ')
+}
+
+function abilityName(value: string) {
+  return ABILITY_NAMES[value] ?? displayId(value)
+}
+
+function skillName(value: string) {
+  return SKILL_NAMES[value] ?? displayId(value)
+}
+
+function optionName(field: string, value: string) {
+  if (field === 'spellcasting_ability') return abilityName(value)
+  if (field.includes('skill')) return skillName(value)
+  return OPTION_NAMES[value] ?? displayId(value)
+}
+
+function choiceFieldName(field: string) {
+  return CHOICE_FIELD_NAMES[field] ?? displayId(field)
+}
 
 function formatModifier(value: number | undefined) {
   return typeof value === 'number' ? `${value >= 0 ? '+' : ''}${value}` : '—'
@@ -17,27 +82,48 @@ function requestError(error: unknown) {
   return error instanceof GameApiError ? error.message : 'Não foi possível concluir a solicitação. Tente novamente.'
 }
 
-function selectionComplete(options: CharacterOptions, assigned: Record<string, number>) {
-  if (Object.keys(assigned).length !== options.abilities.length) return false
-  const remaining = [...options.standard_array]
-  for (const ability of options.abilities) {
-    const index = remaining.indexOf(assigned[ability.id])
-    if (index === -1) return false
-    remaining.splice(index, 1)
-  }
-  return remaining.length === 0
+function assignedStandardArray(options: PHB2024CharacterOptions, assigned: AbilityMap) {
+  const abilityIds = options.abilities
+  if (Object.keys(assigned).length !== abilityIds.length) return false
+  const available = [...options.ability_score_methods.standard_array.values].sort((a, b) => a - b)
+  const selected = abilityIds.map((id) => assigned[id]).sort((a, b) => a - b)
+  return selected.every((score, index) => score === available[index])
+}
+
+function pointBuyCost(options: PHB2024CharacterOptions, assigned: AbilityMap) {
+  return Object.values(assigned).reduce((total, score) => total + (options.ability_score_methods.point_buy.costs[String(score)] ?? Number.POSITIVE_INFINITY), 0)
+}
+
+function formatPackage(items: PHB2024EquipmentPackage['items']) {
+  return items.map((entry) => `${entry.quantity > 1 ? `${entry.quantity}× ` : ''}${entry.name}`).join(' · ') || 'Sem itens'
+}
+
+function grantedSpeciesSkills(species: PHB2024SpeciesOption | undefined, choices: Record<string, string>) {
+  if (species?.id === 'human' && choices.skillful_skill) return [choices.skillful_skill]
+  if (species?.id === 'elf' && choices.keen_senses_skill) return [choices.keen_senses_skill]
+  return []
 }
 
 export function CharacterWizard({ onCreated }: CharacterWizardProps) {
-  const [options, setOptions] = useState<CharacterOptions | null>(null)
+  const [options, setOptions] = useState<PHB2024CharacterOptions | null>(null)
   const [loadingOptions, setLoadingOptions] = useState(true)
   const [step, setStep] = useState(0)
   const [name, setName] = useState('')
   const [classId, setClassId] = useState('')
-  const [level, setLevel] = useState<number | null>(null)
-  const [abilities, setAbilities] = useState<Record<string, number>>({})
+  const [speciesId, setSpeciesId] = useState('')
+  const [speciesChoices, setSpeciesChoices] = useState<Record<string, string>>({})
+  const [backgroundId, setBackgroundId] = useState('')
+  const [alignmentId, setAlignmentId] = useState('')
+  const [languageChoices, setLanguageChoices] = useState<string[]>([])
+  const [abilityMethodId, setAbilityMethodId] = useState<'standard_array' | 'point_buy' | 'rolled'>('standard_array')
+  const [baseAbilities, setBaseAbilities] = useState<AbilityMap>({})
+  const [bonusMode, setBonusMode] = useState<BonusMode>('two_one')
+  const [boostTwo, setBoostTwo] = useState('')
+  const [boostOne, setBoostOne] = useState('')
+  const [boostOnes, setBoostOnes] = useState<string[]>([])
   const [skills, setSkills] = useState<string[]>([])
-  const [weaponId, setWeaponId] = useState('')
+  const [classEquipmentOption, setClassEquipmentOption] = useState('')
+  const [backgroundEquipmentOption, setBackgroundEquipmentOption] = useState('')
   const [preview, setPreview] = useState<CharacterValidation | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -52,7 +138,7 @@ export function CharacterWizard({ onCreated }: CharacterWizardProps) {
     setLoadingOptions(true)
     setError(null)
     try {
-      const catalog = await loadCharacterOptions(controller.signal)
+      const catalog = await loadPHB2024CharacterOptions(controller.signal)
       if (!controller.signal.aborted) setOptions(catalog)
     } catch (failure) {
       if (!controller.signal.aborted) setError(requestError(failure))
@@ -64,7 +150,7 @@ export function CharacterWizard({ onCreated }: CharacterWizardProps) {
   useEffect(() => {
     const controller = new AbortController()
     request.current = controller
-    void loadCharacterOptions(controller.signal).then((catalog) => {
+    void loadPHB2024CharacterOptions(controller.signal).then((catalog) => {
       if (!controller.signal.aborted) setOptions(catalog)
     }).catch((failure: unknown) => {
       if (!controller.signal.aborted) setError(requestError(failure))
@@ -72,38 +158,149 @@ export function CharacterWizard({ onCreated }: CharacterWizardProps) {
       if (!controller.signal.aborted) setLoadingOptions(false)
     })
     return () => request.current?.abort()
-  }, [fetchOptions])
+  }, [])
 
   useEffect(() => {
     if (step > 0) title.current?.focus()
   }, [step])
 
   const chosenClass = options?.classes.find((choice) => choice.id === classId)
-  const allowedSkills = options?.skills.filter((skill) => chosenClass?.skill_options.includes(skill.id)) ?? []
-  const allowedWeapons = options?.weapons.filter((weapon) => chosenClass?.weapon_options.includes(weapon.id)) ?? []
+  const chosenSpecies = options?.species.find((choice) => choice.id === speciesId)
+  const chosenBackground = options?.backgrounds.find((choice) => choice.id === backgroundId)
+  const eligibleSkills = chosenClass?.skill_choices.options ?? []
+  const eligibleBackgroundAbilities = chosenBackground?.eligible_abilities ?? []
+  const speciesSkillChoices = grantedSpeciesSkills(chosenSpecies, speciesChoices)
+  const selectedBackgroundIncreases: AbilityMap = {}
+  if (bonusMode === 'two_one' && boostTwo && boostOne && boostTwo !== boostOne) {
+    selectedBackgroundIncreases[boostTwo] = 2
+    selectedBackgroundIncreases[boostOne] = 1
+  } else if (bonusMode === 'three_one') {
+    for (const id of boostOnes) if (id) selectedBackgroundIncreases[id] = 1
+  }
+  const finalAbilities: AbilityMap = { ...baseAbilities }
+  for (const [id, increase] of Object.entries(selectedBackgroundIncreases)) {
+    if (typeof finalAbilities[id] === 'number') finalAbilities[id] += increase
+  }
+  const pointBuySpend = options ? pointBuyCost(options, baseAbilities) : 0
+  const abilityAssignmentComplete = Boolean(options && (
+    abilityMethodId === 'standard_array' ? assignedStandardArray(options, baseAbilities)
+      : abilityMethodId === 'point_buy' ? Object.keys(baseAbilities).length === options.abilities.length &&
+        Object.values(baseAbilities).every((score) => score >= options.ability_score_methods.point_buy.minimum && score <= options.ability_score_methods.point_buy.maximum) &&
+        pointBuySpend <= options.ability_score_methods.point_buy.budget
+        : Object.keys(baseAbilities).length === options.abilities.length && Object.values(baseAbilities).every((score) => score >= 3 && score <= 18)
+  ))
+  const increasesComplete = Boolean(chosenBackground && (
+    bonusMode === 'two_one'
+      ? eligibleBackgroundAbilities.includes(boostTwo) && eligibleBackgroundAbilities.includes(boostOne) && boostTwo !== boostOne
+      : boostOnes.length === 3 && new Set(boostOnes).size === 3 && boostOnes.every((id) => eligibleBackgroundAbilities.includes(id))
+  ))
+  const speciesComplete = Boolean(chosenSpecies && Object.entries(chosenSpecies.choices).every(([field, values]) =>
+    values.length === 0 || (Boolean(speciesChoices[field]) && values.includes(speciesChoices[field]))))
+  const originComplete = Boolean(chosenBackground && alignmentId &&
+    languageChoices.length === options?.language_rules.additional_choice_count &&
+    new Set(languageChoices).size === languageChoices.length)
   const complete = step === 0 ? Boolean(name.trim())
-    : step === 1 ? Boolean(chosenClass && level !== null && chosenClass.levels.includes(level))
-      : step === 2 ? Boolean(options && selectionComplete(options, abilities))
-        : step === 3 ? Boolean(chosenClass && skills.length === chosenClass.skill_choices && skills.every((id) => chosenClass.skill_options.includes(id)))
-          : step === 4 ? Boolean(allowedWeapons.some((weapon) => weapon.id === weaponId)) : Boolean(preview)
+    : step === 1 ? Boolean(chosenClass)
+      : step === 2 ? speciesComplete
+        : step === 3 ? originComplete
+          : step === 4 ? abilityAssignmentComplete && increasesComplete &&
+            Object.values(finalAbilities).length === 6 && Object.values(finalAbilities).every((score) => score <= 20)
+            : step === 5 ? Boolean(chosenClass && skills.length === chosenClass.skill_choices.count && skills.every((id) => eligibleSkills.includes(id)))
+              : step === 6 ? Boolean(chosenClass?.equipment_packages.some((pack) => pack.id === classEquipmentOption) &&
+                chosenBackground?.equipment_packages.some((pack) => pack.id === backgroundEquipmentOption))
+                : Boolean(preview)
 
-  function draft(): CharacterDraft {
-    return { name: name.trim(), class_id: classId, level: level as number, abilities, skills, weapon_id: weaponId }
+  function setSpecies(species: PHB2024SpeciesOption) {
+    setSpeciesId(species.id)
+    setSpeciesChoices({})
+    setPreview(null)
+  }
+
+  function setBackground(background: PHB2024BackgroundOption) {
+    setBackgroundId(background.id)
+    setBoostTwo('')
+    setBoostOne('')
+    setBoostOnes([])
+    setBackgroundEquipmentOption('')
+    setPreview(null)
+  }
+
+  function chooseScore(abilityId: string, value: string) {
+    setBaseAbilities((current) => {
+      const updated = { ...current }
+      if (value === '') delete updated[abilityId]
+      else updated[abilityId] = Number(value)
+      return updated
+    })
+    setPreview(null)
+  }
+
+  function chooseMethod(method: 'standard_array' | 'point_buy' | 'rolled') {
+    setAbilityMethodId(method)
+    setBaseAbilities({})
+    setPreview(null)
+  }
+
+  function applyRecommendation() {
+    if (!options || !classId) return
+    const suggested = options.recommended_standard_array[classId]
+    if (suggested) {
+      setAbilityMethodId('standard_array')
+      setBaseAbilities({ ...suggested })
+      setPreview(null)
+    }
+  }
+
+  function toggleSkill(id: string) {
+    if (!chosenClass) return
+    setSkills((current) => current.includes(id)
+      ? current.filter((skill) => skill !== id)
+      : current.length < chosenClass.skill_choices.count ? [...current, id] : current)
+    setPreview(null)
+  }
+
+  function toggleLanguage(id: string) {
+    const limit = options?.language_rules.additional_choice_count ?? 2
+    setLanguageChoices((current) => current.includes(id)
+      ? current.filter((language) => language !== id)
+      : current.length < limit ? [...current, id] : current)
+    setPreview(null)
+  }
+
+  function draft(): PHB2024CharacterDraft {
+    return {
+      name: name.trim(),
+      class_id: classId,
+      level: 1,
+      species_id: speciesId,
+      species_choices: speciesChoices,
+      background_id: backgroundId,
+      alignment_id: alignmentId,
+      ability_method_id: abilityMethodId,
+      base_abilities: baseAbilities,
+      background_ability_increases: selectedBackgroundIncreases,
+      abilities: finalAbilities,
+      skills,
+      language_choices: languageChoices,
+      class_equipment_option: classEquipmentOption,
+      background_equipment_option: backgroundEquipmentOption,
+      class_choices: {},
+    }
   }
 
   async function next() {
     if (!complete || busy || submitting.current) return
     setError(null)
-    if (step !== 4) {
+    if (step !== 6) {
       setStep((previous) => previous + 1)
       return
     }
     submitting.current = true
     setBusy(true)
     try {
-      const validation = await validateCharacter(draft())
+      const validation = await validatePHB2024Character(draft())
       setPreview(validation)
-      setStep(5)
+      setStep(7)
     } catch (failure) {
       setError(requestError(failure))
     } finally {
@@ -118,7 +315,7 @@ export function CharacterWizard({ onCreated }: CharacterWizardProps) {
     setBusy(true)
     setError(null)
     try {
-      const created = await createCharacter(draft())
+      const created = await createPHB2024Character(draft())
       const confirmedClass = created.character.class
       const confirmedId = confirmedClass && typeof confirmedClass === 'object' && 'id' in confirmedClass ? confirmedClass.id : null
       const confirmedClassName = chosenClass && confirmedId === chosenClass.id ? chosenClass.name : classId
@@ -133,35 +330,9 @@ export function CharacterWizard({ onCreated }: CharacterWizardProps) {
 
   function back() {
     if (busy) return
-    if (step === 5) setPreview(null)
+    if (step === 7) setPreview(null)
     setError(null)
     setStep((previous) => Math.max(0, previous - 1))
-  }
-
-  function chooseClass(choice: CharacterClassOption) {
-    setClassId(choice.id)
-    setLevel(choice.levels.length === 1 ? choice.levels[0] : null)
-    setSkills([])
-    setWeaponId('')
-    setPreview(null)
-  }
-
-  function chooseScore(abilityId: string, value: string) {
-    setAbilities((current) => {
-      const updated = { ...current }
-      if (value === '') delete updated[abilityId]
-      else updated[abilityId] = Number(value)
-      return updated
-    })
-    setPreview(null)
-  }
-
-  function toggleSkill(id: string) {
-    if (!chosenClass) return
-    setSkills((current) => current.includes(id)
-      ? current.filter((skill) => skill !== id)
-      : current.length < chosenClass.skill_choices ? [...current, id] : current)
-    setPreview(null)
   }
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -170,24 +341,32 @@ export function CharacterWizard({ onCreated }: CharacterWizardProps) {
     else void next()
   }
 
+  const classPackage = chosenClass?.equipment_packages.find((pack) => pack.id === classEquipmentOption)
+  const backgroundPackage = chosenBackground?.equipment_packages.find((pack) => pack.id === backgroundEquipmentOption)
+  const chosenAlignment = options?.alignment_options.find((alignment) => alignment.id === alignmentId)
+  const chosenLanguages = options?.language_rules.additional_options.filter((language) => languageChoices.includes(language.id)) ?? []
+  const grantedSkills = [...new Set([...(chosenBackground?.skill_proficiencies ?? []), ...speciesSkillChoices])]
+  const originBonusSummary = Object.entries(selectedBackgroundIncreases)
+    .map(([id, bonus]) => `${abilityName(id)} +${bonus}`).join(' · ')
+
   return (
     <section className="wizard" aria-labelledby="wizard-title">
       <div className="wizard-intro">
         <span className="section-kicker"><span className="kicker-line" /> O início da sua jornada</span>
         <h1 id="wizard-title">Toda lenda começa <em>com alguém.</em></h1>
-        <p>Crie seu personagem, uma escolha de cada vez. A ficha e as regras são conferidas pelo Mestre antes da aventura.</p>
+        <p>Criação baseada exclusivamente no Livro do Jogador 2024. As escolhas são verificadas pelo motor de regras.</p>
       </div>
 
       {loadingOptions ? (
-        <p className="wizard-notice" role="status">Carregando as opções de personagem…</p>
+        <p className="wizard-notice" role="status">Carregando as opções de personagem do PHB 2024…</p>
       ) : !options ? (
         <div className="wizard-notice" role="alert">
-          <p>{error ?? 'Não foi possível carregar as opções de personagem.'}</p>
+          <p>{error ?? 'Não foi possível carregar o catálogo de personagem.'}</p>
           <button type="button" className="wizard-button" onClick={() => void fetchOptions()}>Tentar novamente</button>
         </div>
       ) : (
         <div className="wizard-panel">
-          <div className="wizard-progress"><span>Criação de personagem</span><strong>Etapa {step + 1} de {steps.length}</strong></div>
+          <div className="wizard-progress"><span>Criação de personagem · PHB 2024</span><strong>Etapa {step + 1} de {steps.length}</strong></div>
           <ol className="wizard-steps" style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }} aria-label="Etapas da criação">
             {steps.map((label, index) => (
               <li key={label} className={index === step ? 'is-active' : index < step ? 'is-done' : ''} aria-current={index === step ? 'step' : undefined}>
@@ -202,91 +381,194 @@ export function CharacterWizard({ onCreated }: CharacterWizardProps) {
                 <h2 ref={title} tabIndex={-1}>Como devemos chamar você?</h2>
                 <p>Escolha um nome para o personagem que vai viver esta história.</p>
                 <label className="wizard-label" htmlFor="character-name">Nome do personagem</label>
-                <input id="character-name" name="name" className="wizard-text" value={name} onChange={(event) => setName(event.target.value)} maxLength={128} autoComplete="off" placeholder="Digite um nome" aria-describedby="name-help" />
-                <small id="name-help" className="wizard-help">Você poderá revisar este nome antes de confirmar.</small>
+                <input id="character-name" name="name" className="wizard-text" value={name} onChange={(event) => { setName(event.target.value); setPreview(null) }} maxLength={128} autoComplete="off" placeholder="Digite um nome" aria-describedby="name-help" />
+                <small id="name-help" className="wizard-help">O personagem começa no nível 1.</small>
               </>}
+
               {step === 1 && <>
                 <h2 ref={title} tabIndex={-1}>Escolha sua classe</h2>
-                <p>A classe define como seu personagem começa a aventura. Mostramos somente as opções disponíveis agora.</p>
-                <fieldset className="wizard-fieldset"><legend className="wizard-label">Classes disponíveis</legend>
-                  <div className="wizard-options">
+                <p>A classe determina suas capacidades iniciais. Estas são as 12 classes do Livro do Jogador 2024.</p>
+                <fieldset className="wizard-fieldset"><legend className="wizard-label">Classes do PHB 2024</legend>
+                  <div className="wizard-options wizard-options--grid">
                     {options.classes.map((choice) => <label key={choice.id} className={`wizard-choice ${choice.id === classId ? 'is-selected' : ''}`}>
-                      <input type="radio" name="class" value={choice.id} checked={choice.id === classId} onChange={() => chooseClass(choice)} />
-                      <span><strong>{choice.name}</strong>{choice.description && <small>{choice.description}</small>}</span>
+                      <input type="radio" name="class" value={choice.id} checked={choice.id === classId} onChange={() => {
+                        setClassId(choice.id); setSkills([]); setClassEquipmentOption(''); setPreview(null)
+                      }} />
+                      <span><strong>{choice.name}</strong><small>Dado de Vida d{choice.hit_die} · {choice.primary_abilities.map(abilityName).join(', ')}</small></span>
                     </label>)}
                   </div>
                 </fieldset>
-                {chosenClass && chosenClass.levels.length > 1 && <>
-                  <label className="wizard-label" htmlFor="character-level">Nível inicial</label>
-                  <select id="character-level" value={level ?? ''} onChange={(event) => setLevel(Number(event.target.value))}>
-                    <option value="" disabled>Escolha o nível</option>
-                    {chosenClass.levels.map((available) => <option key={available} value={available}>{available}</option>)}
-                  </select>
-                </>}
-                {chosenClass && level !== null && <p className="wizard-help">Nível inicial: {level}</p>}
+                <p className="wizard-help">Nível inicial fixo: 1.</p>
               </>}
+
               {step === 2 && <>
-                <h2 ref={title} tabIndex={-1}>Distribua seus atributos</h2>
-                <p>Escolha um valor da lista do Mestre para cada atributo. Cada valor pode ser usado apenas a quantidade de vezes oferecida.</p>
+                <h2 ref={title} tabIndex={-1}>Escolha sua espécie</h2>
+                <p>Espécie e escolhas associadas são registradas conforme o catálogo 2024.</p>
+                <fieldset className="wizard-fieldset"><legend className="wizard-label">Espécies</legend>
+                  <div className="wizard-options wizard-options--grid">
+                    {options.species.map((choice) => <label key={choice.id} className={`wizard-choice ${choice.id === speciesId ? 'is-selected' : ''}`}>
+                      <input type="radio" name="species" value={choice.id} checked={choice.id === speciesId} onChange={() => setSpecies(choice)} />
+                      <span><strong>{choice.name}</strong><small>Identidade registrada na ficha</small></span>
+                    </label>)}
+                  </div>
+                </fieldset>
+                {chosenSpecies && Object.entries(chosenSpecies.choices).filter(([, values]) => values.length > 0).map(([field, values]) => (
+                    <label className="wizard-label" key={field} htmlFor={`species-${field}`}>
+                    {choiceFieldName(field)}
+                    <select id={`species-${field}`} value={speciesChoices[field] ?? ''} onChange={(event) => {
+                      setSpeciesChoices((current) => ({ ...current, [field]: event.target.value })); setPreview(null)
+                    }}>
+                      <option value="">Escolha uma opção</option>
+                      {values.map((value) => <option key={value} value={value}>{optionName(field, value)}</option>)}
+                    </select>
+                  </label>
+                ))}
+              </>}
+
+              {step === 3 && <>
+                <h2 ref={title} tabIndex={-1}>Defina sua origem</h2>
+                <p>Escolha um background do PHB 2024; ele determina o talento de origem e as opções de aumento de atributo.</p>
+                <fieldset className="wizard-fieldset"><legend className="wizard-label">Origens do Livro do Jogador 2024</legend>
+                  <div className="wizard-options wizard-options--grid">
+                    {options.backgrounds.map((choice) => <label key={choice.id} className={`wizard-choice ${choice.id === backgroundId ? 'is-selected' : ''}`}>
+                      <input type="radio" name="background" value={choice.id} checked={choice.id === backgroundId} onChange={() => setBackground(choice)} />
+                      <span><strong>{choice.name}</strong><small>{choice.origin_feat_label_pt_br} · {choice.skill_proficiencies.map(skillName).join(', ')}</small></span>
+                    </label>)}
+                  </div>
+                </fieldset>
+                <label className="wizard-label" htmlFor="alignment">Alinhamento
+                  <select id="alignment" value={alignmentId} onChange={(event) => { setAlignmentId(event.target.value); setPreview(null) }}>
+                    <option value="">Escolha um alinhamento</option>
+                    {options.alignment_options.map((choice) => <option key={choice.id} value={choice.id}>{choice.name}</option>)}
+                  </select>
+                </label>
+                <fieldset className="wizard-fieldset"><legend className="wizard-label">Idiomas adicionais — escolha {options.language_rules.additional_choice_count}</legend>
+                  <div className="wizard-options wizard-options--grid">
+                    {options.language_rules.additional_options.map((language) => <label key={language.id} className={`wizard-choice ${languageChoices.includes(language.id) ? 'is-selected' : ''}`}>
+                      <input type="checkbox" checked={languageChoices.includes(language.id)} disabled={!languageChoices.includes(language.id) && languageChoices.length >= options.language_rules.additional_choice_count} onChange={() => toggleLanguage(language.id)} />
+                      <span><strong>{language.name}</strong></span>
+                    </label>)}
+                  </div>
+                </fieldset>
+                <p className="wizard-help" role="status">Comum é incluído automaticamente · {languageChoices.length} de {options.language_rules.additional_choice_count} idiomas escolhidos.</p>
+              </>}
+
+              {step === 4 && <>
+                <h2 ref={title} tabIndex={-1}>Atribua seus atributos</h2>
+                <p>Escolha um método do PHB 2024 e aplique os aumentos oferecidos pela origem selecionada.</p>
+                <fieldset className="wizard-fieldset"><legend className="wizard-label">Método de geração</legend>
+                  <div className="wizard-options wizard-options--grid">
+                    {(['standard_array', 'point_buy', 'rolled'] as const).map((method) => <label key={method} className={`wizard-choice ${abilityMethodId === method ? 'is-selected' : ''}`}>
+                      <input type="radio" name="ability-method" checked={abilityMethodId === method} onChange={() => chooseMethod(method)} />
+                      <span><strong>{METHOD_LABELS[method]}</strong><small>{method === 'standard_array' ? options.ability_score_methods.standard_array.values.join(', ') : method === 'point_buy' ? `${options.ability_score_methods.point_buy.budget} pontos` : `${options.ability_score_methods.rolled.dice}, descartando ${options.ability_score_methods.rolled.drop_lowest}`}</small></span>
+                    </label>)}
+                  </div>
+                </fieldset>
+                {abilityMethodId === 'standard_array' && classId && <button type="button" className="wizard-button wizard-suggest-button" onClick={applyRecommendation}>Usar distribuição recomendada para {chosenClass?.name}</button>}
+                {abilityMethodId === 'point_buy' && <p className="wizard-help" role="status">Pontos gastos: {pointBuySpend} de {options.ability_score_methods.point_buy.budget}.</p>}
+                {abilityMethodId === 'rolled' && <p className="wizard-help">Insira os resultados obtidos rolando {options.ability_score_methods.rolled.dice} e descartando o menor dado, conforme o PHB 2024.</p>}
                 <div className="wizard-attributes">
-                  {options.abilities.map((ability) => {
-                    const score = abilities[ability.id]
-                    return <div className="wizard-attribute" key={ability.id}>
-                      <label htmlFor={`score-${ability.id}`}>{ability.name}{ability.abbreviation && <>{' '}<span>({ability.abbreviation})</span></>}</label>
-                      {ability.description && <small id={`help-${ability.id}`}>{ability.description}</small>}
-                      <select id={`score-${ability.id}`} value={score ?? ''} onChange={(event) => chooseScore(ability.id, event.target.value)} aria-describedby={ability.description ? `help-${ability.id}` : undefined}>
-                        <option value="">Escolha um valor</option>
-                        {options.standard_array.map((value, index) => {
-                          const available = options.standard_array.filter((candidate) => candidate === value).length
-                          const usedByOthers = Object.entries(abilities).filter(([id, selected]) => id !== ability.id && selected === value).length
-                          return <option key={`${value}-${index}`} value={value} disabled={usedByOthers >= available && score !== value}>{value}</option>
-                        })}
-                      </select>
+                  {options.abilities.map((abilityId) => {
+                    const score = baseAbilities[abilityId]
+                    const used = Object.entries(baseAbilities).filter(([id, value]) => id !== abilityId && value === score).length
+                    const standardLimit = options.ability_score_methods.standard_array.values.filter((value) => value === score).length
+                    return <div className="wizard-attribute" key={abilityId}>
+                      <label htmlFor={`score-${abilityId}`}>{abilityName(abilityId)}</label>
+                      {abilityMethodId === 'rolled' ? <input id={`score-${abilityId}`} type="number" min={3} max={18} value={score ?? ''} onChange={(event) => chooseScore(abilityId, event.target.value)} />
+                        : <select id={`score-${abilityId}`} value={score ?? ''} onChange={(event) => chooseScore(abilityId, event.target.value)}>
+                          <option value="">Escolha</option>
+                          {(abilityMethodId === 'standard_array' ? options.ability_score_methods.standard_array.values : Array.from({ length: options.ability_score_methods.point_buy.maximum - options.ability_score_methods.point_buy.minimum + 1 }, (_, index) => index + options.ability_score_methods.point_buy.minimum)).map((value, index) => {
+                            const duplicateUnavailable = abilityMethodId === 'standard_array' && used >= standardLimit
+                            return <option key={`${value}-${index}`} value={value} disabled={duplicateUnavailable && score !== value}>{value}</option>
+                          })}
+                        </select>}
+                      <small>Final: {typeof finalAbilities[abilityId] === 'number' ? finalAbilities[abilityId] : '—'}</small>
                     </div>
                   })}
                 </div>
-                <p className="wizard-help" role="status">{Object.keys(abilities).length} de {options.abilities.length} atributos preenchidos.</p>
+                <fieldset className="wizard-fieldset"><legend className="wizard-label">Aumento de atributo da origem{chosenBackground ? ` · ${chosenBackground.name}` : ''}</legend>
+                  <div className="wizard-choice wizard-choice--plain">
+                    <label><input type="radio" name="bonus-mode" checked={bonusMode === 'two_one'} onChange={() => { setBonusMode('two_one'); setBoostTwo(''); setBoostOne(''); setPreview(null) }} /> +2 em um atributo e +1 em outro</label>
+                    <label><input type="radio" name="bonus-mode" checked={bonusMode === 'three_one'} onChange={() => { setBonusMode('three_one'); setBoostTwo(''); setBoostOne(''); setBoostOnes([]); setPreview(null) }} /> +1 em três atributos diferentes</label>
+                  </div>
+                  {bonusMode === 'two_one' ? <div className="wizard-bonus-selects">
+                    <label className="wizard-label" htmlFor="boost-two">Atributo que recebe +2
+                      <select id="boost-two" value={boostTwo} onChange={(event) => { setBoostTwo(event.target.value); setPreview(null) }}>
+                        <option value="">Escolha</option>{eligibleBackgroundAbilities.map((id) => <option key={id} value={id}>{abilityName(id)}</option>)}
+                      </select>
+                    </label>
+                    <label className="wizard-label" htmlFor="boost-one">Atributo diferente que recebe +1
+                      <select id="boost-one" value={boostOne} onChange={(event) => { setBoostOne(event.target.value); setPreview(null) }}>
+                        <option value="">Escolha</option>{eligibleBackgroundAbilities.filter((id) => id !== boostTwo).map((id) => <option key={id} value={id}>{abilityName(id)}</option>)}
+                      </select>
+                    </label>
+                  </div> : <div className="wizard-bonus-selects wizard-bonus-selects--three">
+                    {[0, 1, 2].map((index) => <label className="wizard-label" htmlFor={`boost-one-${index}`} key={index}>Atributo {index + 1} recebe +1
+                      <select id={`boost-one-${index}`} value={boostOnes[index] ?? ''} onChange={(event) => {
+                        setBoostOnes((current) => { const next = [...current]; next[index] = event.target.value; return next })
+                        setPreview(null)
+                      }}>
+                        <option value="">Escolha</option>{eligibleBackgroundAbilities.filter((id) => !boostOnes.includes(id) || boostOnes[index] === id).map((id) => <option key={id} value={id}>{abilityName(id)}</option>)}
+                      </select>
+                    </label>)}
+                  </div>}
+                  {chosenBackground && <p className="wizard-help">A origem permite aumentos em: {eligibleBackgroundAbilities.map(abilityName).join(', ') || '—'}. {originBonusSummary && `Selecionado: ${originBonusSummary}.`}</p>}
+                </fieldset>
               </>}
-              {step === 3 && <>
+
+              {step === 5 && <>
                 <h2 ref={title} tabIndex={-1}>Escolha suas perícias</h2>
-                <p>Perícias representam conhecimentos e práticas do seu personagem. Escolha {chosenClass?.skill_choices} entre as oferecidas para esta classe.</p>
-                <fieldset className="wizard-fieldset"><legend className="wizard-label">Perícias disponíveis</legend>
+                <p>Selecione {chosenClass?.skill_choices.count} perícias entre as opções da classe {chosenClass?.name}.</p>
+                <fieldset className="wizard-fieldset"><legend className="wizard-label">Opções da classe</legend>
                   <div className="wizard-options wizard-options--grid">
-                    {allowedSkills.map((skill) => <label key={skill.id} className={`wizard-choice ${skills.includes(skill.id) ? 'is-selected' : ''}`}>
-                      <input type="checkbox" name="skills" value={skill.id} checked={skills.includes(skill.id)} disabled={!skills.includes(skill.id) && skills.length >= (chosenClass?.skill_choices ?? 0)} onChange={() => toggleSkill(skill.id)} />
-                      <span><strong>{skill.name}</strong>{skill.description && <small>{skill.description}</small>}</span>
+                    {eligibleSkills.map((skill) => <label key={skill} className={`wizard-choice ${skills.includes(skill) ? 'is-selected' : ''}`}>
+                      <input type="checkbox" checked={skills.includes(skill)} disabled={!skills.includes(skill) && skills.length >= (chosenClass?.skill_choices.count ?? 0)} onChange={() => toggleSkill(skill)} />
+                      <span><strong>{skillName(skill)}</strong></span>
                     </label>)}
                   </div>
                 </fieldset>
-                <p className="wizard-help" role="status">{skills.length} de {chosenClass?.skill_choices} perícias escolhidas.</p>
+                <p className="wizard-help" role="status">{skills.length} de {chosenClass?.skill_choices.count} escolhidas.</p>
+                {grantedSkills.length > 0 && <div className="wizard-granted"><strong>Também concedidas pela origem/espécie</strong><span>{grantedSkills.map(skillName).join(' · ')}</span></div>}
               </>}
-              {step === 4 && <>
-                <h2 ref={title} tabIndex={-1}>Equipamento inicial</h2>
-                <p>Escolha uma arma entre as opções disponíveis para sua classe. Os dados de combate virão da ficha conferida pelo Mestre.</p>
-                <fieldset className="wizard-fieldset"><legend className="wizard-label">Armas disponíveis</legend>
-                  <div className="wizard-options">
-                    {allowedWeapons.map((weapon) => <label key={weapon.id} className={`wizard-choice ${weapon.id === weaponId ? 'is-selected' : ''}`}>
-                      <input type="radio" name="weapon" value={weapon.id} checked={weapon.id === weaponId} onChange={() => { setWeaponId(weapon.id); setPreview(null) }} />
-                      <span><strong>{weapon.name}</strong>{weapon.description && <small>{weapon.description}</small>}</span>
+
+              {step === 6 && <>
+                <h2 ref={title} tabIndex={-1}>Escolha o equipamento inicial</h2>
+                <p>Os pacotes são os oferecidos pela classe e pela origem no PHB 2024; o conteúdo selecionado será registrado na ficha.</p>
+                <fieldset className="wizard-fieldset"><legend className="wizard-label">Pacote de {chosenClass?.name}</legend>
+                  <div className="wizard-options wizard-options--grid">
+                    {chosenClass?.equipment_packages.map((pack) => <label key={pack.id} className={`wizard-choice ${classEquipmentOption === pack.id ? 'is-selected' : ''}`}>
+                      <input type="radio" name="class-equipment" value={pack.id} checked={classEquipmentOption === pack.id} onChange={() => { setClassEquipmentOption(pack.id); setPreview(null) }} />
+                      <span><strong>Opção {pack.id}</strong><small>{formatPackage(pack.items)} · {pack.gold_gp} po</small></span>
                     </label>)}
                   </div>
                 </fieldset>
+                <fieldset className="wizard-fieldset"><legend className="wizard-label">Pacote de {chosenBackground?.name}</legend>
+                  <div className="wizard-options wizard-options--grid">
+                    {chosenBackground?.equipment_packages.map((pack) => <label key={pack.id} className={`wizard-choice ${backgroundEquipmentOption === pack.id ? 'is-selected' : ''}`}>
+                      <input type="radio" name="background-equipment" value={pack.id} checked={backgroundEquipmentOption === pack.id} onChange={() => { setBackgroundEquipmentOption(pack.id); setPreview(null) }} />
+                      <span><strong>Opção {pack.id}</strong><small>{formatPackage(pack.items)} · {pack.gold_gp} po</small></span>
+                    </label>)}
+                  </div>
+                </fieldset>
+                {classPackage && backgroundPackage && <p className="wizard-help">Total: {classPackage.gold_gp + backgroundPackage.gold_gp} po · os itens dos dois pacotes serão registrados.</p>}
               </>}
-              {step === 5 && preview && <>
+
+              {step === 7 && preview && <>
                 <h2 ref={title} tabIndex={-1}>Sua ficha, pronta para começar</h2>
-                <p>O Mestre validou suas escolhas e calculou os valores abaixo. Revise tudo antes de confirmar.</p>
+                <p>O motor validou as escolhas segundo o PHB 2024. Revise o resumo antes de confirmar.</p>
                 <div className="wizard-summary" aria-label="Resumo da ficha validada">
-                  <div className="wizard-summary-identity"><span className="section-kicker">Seu personagem</span><strong>{String(preview.character.name)}</strong><span>{chosenClass?.name} · Nível {String(preview.character.level)}</span></div>
+                  <div className="wizard-summary-identity"><span className="section-kicker">Seu personagem</span><strong>{String(preview.character.name)}</strong><span>{chosenClass?.name} · {chosenSpecies?.name} · Nível 1</span><small>{chosenBackground?.name} · {chosenAlignment?.name}</small></div>
                   <div className="wizard-summary-stats">
                     <span><small>PV</small><strong>{preview.derived.hp.current}/{preview.derived.hp.max}</strong></span>
                     <span><small>CA</small><strong>{preview.derived.ac.value}</strong></span>
                     <span><small>Iniciativa</small><strong>{formatModifier(preview.derived.initiative_modifier)}</strong></span>
                     <span><small>Proficiência</small><strong>{formatModifier(preview.derived.proficiency_bonus)}</strong></span>
                   </div>
-                  <div className="wizard-summary-section"><h3>Atributos e modificadores</h3><dl>{options.abilities.map((ability) => <div key={ability.id}><dt>{ability.name}</dt><dd>{String((preview.character.abilities as Record<string, number>)[ability.id] ?? '—')} <small>({formatModifier(preview.derived.ability_modifiers[ability.id])})</small></dd></div>)}</dl></div>
-                  <div className="wizard-summary-section"><h3>Perícias escolhidas</h3><dl>{skills.map((id) => <div key={id}><dt>{options.skills.find((skill) => skill.id === id)?.name}</dt><dd>{formatModifier(preview.derived.skill_modifiers[id])}</dd></div>)}</dl></div>
-                  <div className="wizard-summary-section"><h3>Salvaguardas</h3><dl>{options.abilities.map((ability) => <div key={ability.id}><dt>{ability.name}</dt><dd>{formatModifier(preview.derived.saving_throw_modifiers[ability.id])}</dd></div>)}</dl></div>
-                  <div className="wizard-summary-section"><h3>Arma inicial</h3><p>{options.weapons.find((weapon) => weapon.id === weaponId)?.name}{typeof preview.derived.weapons?.[weaponId]?.damage_dice === 'string' ? ` · ${preview.derived.weapons[weaponId].damage_dice}` : ''}</p></div>
+                  <div className="wizard-summary-section"><h3>Atributos finais</h3><dl>{options.abilities.map((id) => <div key={id}><dt>{abilityName(id)}</dt><dd>{String(finalAbilities[id] ?? '—')} <small>({formatModifier(preview.derived.ability_modifiers[id])})</small></dd></div>)}</dl><p className="wizard-help">Método: {METHOD_LABELS[abilityMethodId]} · Aumentos: {originBonusSummary}</p></div>
+                  <div className="wizard-summary-section"><h3>Perícias</h3><dl>{[...new Set([...skills, ...grantedSkills])].map((id) => <div key={id}><dt>{skillName(id)}</dt><dd>{formatModifier(preview.derived.skill_modifiers[id])}</dd></div>)}</dl></div>
+                  <div className="wizard-summary-section"><h3>Proficiências e origem</h3><p>Salvaguardas: {chosenClass?.saving_throw_proficiencies.map(abilityName).join(', ')}.</p><p>Talento de origem: {chosenBackground?.origin_feat_label_pt_br}.</p></div>
+                  <div className="wizard-summary-section"><h3>Idiomas</h3><p>{[...options.language_rules.required.map((id) => id === 'common' ? 'Comum' : displayId(id)), ...chosenLanguages.map((language) => language.name)].join(' · ')}</p></div>
+                  <div className="wizard-summary-section"><h3>Equipamento inicial</h3><p>{formatPackage(classPackage?.items ?? [])} · {formatPackage(backgroundPackage?.items ?? [])}</p><p>Moedas: {(classPackage?.gold_gp ?? 0) + (backgroundPackage?.gold_gp ?? 0)} po.</p></div>
                 </div>
               </>}
             </div>
@@ -294,7 +576,7 @@ export function CharacterWizard({ onCreated }: CharacterWizardProps) {
             <div className="wizard-controls">
               {step > 0 && <button type="button" className="wizard-button wizard-button--back" disabled={busy} onClick={back}>Voltar</button>}
               <button type="submit" className="wizard-button wizard-button--primary" disabled={!complete || busy}>
-                {busy ? step === 5 ? 'Criando personagem…' : 'Validando ficha…' : step === 5 ? 'Confirmar personagem' : 'Continuar'}
+                {busy ? step === 7 ? 'Criando personagem…' : 'Validando ficha…' : step === 7 ? 'Confirmar personagem' : 'Continuar'}
               </button>
             </div>
           </form>

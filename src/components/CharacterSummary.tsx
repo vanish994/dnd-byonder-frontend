@@ -1,5 +1,20 @@
 import type { DerivedCharacter, GameState } from '../types/game'
 
+const SPECIES_LABELS: Record<string, string> = {
+  aasimar: 'Aasimar', dragonborn: 'Draconato', dwarf: 'Anão', elf: 'Elfo', gnome: 'Gnomo',
+  goliath: 'Golias', halfling: 'Halfling', human: 'Humano', orc: 'Orc', tiefling: 'Tiefling',
+}
+const BACKGROUND_LABELS: Record<string, string> = {
+  acolyte: 'Acólito', artisan: 'Artesão', charlatan: 'Charlatão', criminal: 'Criminoso', entertainer: 'Artista',
+  farmer: 'Fazendeiro', guard: 'Guarda', guide: 'Guia', hermit: 'Eremita', merchant: 'Comerciante',
+  noble: 'Nobre', sage: 'Sábio', sailor: 'Marinheiro', scribe: 'Escriba', soldier: 'Soldado', wayfarer: 'Viajante',
+}
+const ALIGNMENT_LABELS: Record<string, string> = {
+  lawful_good: 'Leal e Bom', neutral_good: 'Neutro e Bom', chaotic_good: 'Caótico e Bom',
+  lawful_neutral: 'Leal e Neutro', neutral: 'Neutro', chaotic_neutral: 'Caótico e Neutro',
+  lawful_evil: 'Leal e Mau', neutral_evil: 'Neutro e Mau', chaotic_evil: 'Caótico e Mau',
+}
+
 interface CharacterSummaryProps {
   state: GameState
   character: Record<string, unknown> | null
@@ -32,6 +47,18 @@ export function CharacterSummary({ state, character, classLabel, derived }: Char
     const equippedSlot = Object.entries(equipped).find(([, itemId]) => itemId === id)?.[0]
     return { id, label, quantity, equippedSlot }
   })
+  const startingEquipment = current.starting_equipment && typeof current.starting_equipment === 'object' && !Array.isArray(current.starting_equipment)
+    ? current.starting_equipment as Record<string, unknown> : {}
+  const startingItems = Array.isArray(startingEquipment.items) ? startingEquipment.items.flatMap((value, index) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return []
+    const item = value as Record<string, unknown>
+    return typeof item.name === 'string' ? [{ id: `starting-${index}`, label: item.name, quantity: typeof item.quantity === 'number' ? item.quantity : 1, equippedSlot: undefined }] : []
+  }) : []
+  const displayedEquipment = inventoryItems.length ? inventoryItems : startingItems
+  const speciesId = typeof current.species_id === 'string' ? current.species_id : ''
+  const backgroundId = typeof current.background_id === 'string' ? current.background_id : ''
+  const alignmentId = typeof current.alignment_id === 'string' ? current.alignment_id : ''
+  const originDescription = [SPECIES_LABELS[speciesId], BACKGROUND_LABELS[backgroundId]].filter(Boolean).join(' · ')
   const hpRatio = hp !== null && maxHp !== null && maxHp > 0 ? Math.max(0, Math.min(100, (hp / maxHp) * 100)) : 0
 
   return (
@@ -50,6 +77,7 @@ export function CharacterSummary({ state, character, classLabel, derived }: Char
         <div className="character-info">
           <span className="eyebrow">{level !== null ? `Nível ${level}` : 'Nível não informado'}{className ? ` · ${className}` : ''}</span>
           <h2>{name}</h2>
+          {originDescription && <small className="character-origin">{originDescription}{ALIGNMENT_LABELS[alignmentId] ? ` · ${ALIGNMENT_LABELS[alignmentId]}` : ''}</small>}
           <div className="character-stats">
             <span><small>HP</small><strong>{hp !== null ? `${hp}${maxHp !== null ? `/${maxHp}` : ''}` : '—'}</strong></span>
             <span><small>CA</small><strong>{armorClass ?? '—'}</strong></span>
@@ -60,10 +88,10 @@ export function CharacterSummary({ state, character, classLabel, derived }: Char
       <div className="hp-track" aria-label={hp !== null && maxHp !== null ? `${hp} de ${maxHp} pontos de vida` : 'Pontos de vida não informados'}>
         <span style={{ width: `${hpRatio}%` }} />
       </div>
-      {inventoryItems.length > 0 && (
+      {displayedEquipment.length > 0 && (
         <div className="character-equipment" aria-label="Equipamento">
           <span className="equipment-heading">Equipamento</span>
-          {inventoryItems.map((item) => (
+          {displayedEquipment.map((item) => (
             <div className="equipment-row" key={item.id}>
               <span>{item.label} ×{item.quantity}</span>
               {item.equippedSlot && <small>{item.equippedSlot === 'weapon' ? 'equipada' : 'vestida'}</small>}
@@ -71,7 +99,7 @@ export function CharacterSummary({ state, character, classLabel, derived }: Char
           ))}
         </div>
       )}
-      <div className="character-footer"><span><i aria-hidden="true">◈</i> Ficha fornecida pelo Mestre</span></div>
+      <div className="character-footer"><span><i aria-hidden="true">◈</i> D&amp;D · Regras 2024</span></div>
     </aside>
   )
 }

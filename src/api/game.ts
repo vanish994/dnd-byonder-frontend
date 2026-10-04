@@ -1,6 +1,8 @@
 import type {
   CatalogItem, CharacterClassOption, CharacterCreation, CharacterDraft, CharacterOptions,
   CharacterValidation, DerivedCharacter, GameTurnRequest, GameTurnResponse, RuleResolution, RuleTeaching, RuleTeachingTip,
+  PHB2024BackgroundOption, PHB2024CharacterDraft, PHB2024CharacterOptions, PHB2024ClassOption,
+  PHB2024EquipmentPackage, PHB2024SpeciesOption,
 } from '../types/game'
 
 const PUBLIC_GATEWAY_URL = 'https://dnd-byonder-gateway.onrender.com'
@@ -102,6 +104,143 @@ function parseOptions(value: unknown): CharacterOptions {
     abilities,
     skills,
     weapons,
+  }
+}
+
+function stringArray(value: unknown, description: string): string[] {
+  if (!Array.isArray(value) || !value.every((entry) => typeof entry === 'string')) invalid(description)
+  return value as string[]
+}
+
+function parseEquipmentPackages(value: unknown): PHB2024EquipmentPackage[] {
+  if (!Array.isArray(value)) invalid('pacotes de equipamento 2024')
+  return value.map((raw) => {
+    if (!record(raw) || typeof raw.id !== 'string' || !raw.id || !Array.isArray(raw.items) ||
+      !raw.items.every((entry) => record(entry) && typeof entry.name === 'string' && Number.isInteger(entry.quantity)) ||
+      !Number.isInteger(raw.gold_gp)) invalid('pacotes de equipamento 2024')
+    return {
+      id: raw.id as string,
+      items: raw.items as Array<{ name: string; quantity: number }>,
+      gold_gp: raw.gold_gp as number,
+      ...(raw.source_details !== undefined ? { source_details: raw.source_details } : {}),
+    }
+  })
+}
+
+function parsePHB2024Options(value: unknown): PHB2024CharacterOptions {
+  if (!record(value) || value.edition !== 2024 || typeof value.schema_version !== 'string' ||
+    !Array.isArray(value.classes) || !Array.isArray(value.species) || !Array.isArray(value.backgrounds) ||
+    !record(value.ability_score_methods) || !record(value.ability_score_methods.standard_array) ||
+    !record(value.ability_score_methods.point_buy) || !record(value.ability_score_methods.rolled) ||
+    !record(value.ability_score_methods.background_increases) || !record(value.language_rules)) invalid('catálogo PHB 2024')
+
+  const classes: PHB2024ClassOption[] = value.classes.map((raw: unknown) => {
+    if (!record(raw) || !record(raw.skill_choices) || !Number.isInteger(raw.skill_choices.count) ||
+      !Array.isArray(raw.levels) || !Array.isArray(raw.level_1_features) ||
+      !Array.isArray(raw.equipment_packages)) invalid('opções de classe PHB 2024')
+    const base = item(raw)
+    const featureEntries = raw.level_1_features.filter(record).map((feature) => ({
+      id: typeof feature.id === 'string' ? feature.id : '',
+      name: typeof feature.name === 'string' ? feature.name : '',
+      ...(typeof feature.summary === 'string' ? { summary: feature.summary } : {}),
+    })).filter((feature) => feature.id && feature.name)
+    if (!featureEntries.length) invalid('características de classe PHB 2024')
+    return {
+      ...base,
+      source_name: typeof raw.source_name === 'string' ? raw.source_name : base.name,
+      levels: integers(raw.levels),
+      hit_die: Number.isInteger(raw.hit_die) ? raw.hit_die as number : invalid('dado de vida PHB 2024'),
+      primary_abilities: stringArray(raw.primary_abilities, 'atributos primários PHB 2024'),
+      skill_choices: {
+        count: raw.skill_choices.count as number,
+        options: stringArray(raw.skill_choices.options, 'perícias PHB 2024'),
+      },
+      saving_throw_proficiencies: stringArray(raw.saving_throw_proficiencies, 'salvaguardas PHB 2024'),
+      weapon_proficiencies: stringArray(raw.weapon_proficiencies, 'armas PHB 2024'),
+      armor_proficiencies: stringArray(raw.armor_proficiencies, 'armaduras PHB 2024'),
+      level_1_features: featureEntries,
+      equipment_packages: parseEquipmentPackages(raw.equipment_packages),
+    }
+  })
+
+  const species: PHB2024SpeciesOption[] = value.species.map((raw: unknown) => {
+    if (!record(raw) || !record(raw.choices)) invalid('opções de espécie PHB 2024')
+    const choices: Record<string, string[]> = {}
+    for (const [key, options] of Object.entries(raw.choices)) choices[key] = stringArray(options, 'escolhas de espécie PHB 2024')
+    const base = item(raw)
+    return {
+      ...base,
+      source_name: typeof raw.source_name === 'string' ? raw.source_name : base.name,
+      choices,
+    }
+  })
+
+  const backgrounds: PHB2024BackgroundOption[] = value.backgrounds.map((raw: unknown) => {
+    if (!record(raw) || typeof raw.origin_feat !== 'string' || typeof raw.origin_feat_id !== 'string' ||
+      typeof raw.origin_feat_label_pt_br !== 'string') invalid('opções de origem PHB 2024')
+    const base = item(raw)
+    return {
+      ...base,
+      source_name: typeof raw.source_name === 'string' ? raw.source_name : base.name,
+      eligible_abilities: stringArray(raw.eligible_abilities, 'atributos de origem PHB 2024'),
+      skill_proficiencies: stringArray(raw.skill_proficiencies, 'perícias de origem PHB 2024'),
+      origin_feat: raw.origin_feat,
+      origin_feat_id: raw.origin_feat_id,
+      origin_feat_label_pt_br: raw.origin_feat_label_pt_br,
+      equipment_packages: parseEquipmentPackages(raw.equipment_packages),
+    }
+  })
+
+  const methods = value.ability_score_methods as Record<string, unknown>
+  const standardArray = methods.standard_array as Record<string, unknown>
+  const pointBuy = methods.point_buy as Record<string, unknown>
+  const rolled = methods.rolled as Record<string, unknown>
+  const backgroundIncreases = methods.background_increases as Record<string, unknown>
+  const languageRules = value.language_rules as Record<string, unknown>
+  if (!Array.isArray(standardArray.values) || !record(pointBuy.costs) || !Array.isArray(backgroundIncreases.patterns) ||
+    !Array.isArray(languageRules.additional_options) || !Array.isArray(languageRules.required)) invalid('regras de atributos/idiomas PHB 2024')
+  const languageOptions = items(languageRules.additional_options)
+  const abilities = stringArray(value.abilities, 'atributos PHB 2024')
+  const skills = stringArray(value.skills, 'perícias PHB 2024')
+  if (classes.length !== 12 || species.length !== 10 || backgrounds.length !== 16 ||
+    new Set(classes.map((entry) => entry.id)).size !== 12 || new Set(species.map((entry) => entry.id)).size !== 10 ||
+    new Set(backgrounds.map((entry) => entry.id)).size !== 16 || abilities.length !== 6 ||
+    !Array.isArray(value.recommended_standard_array) && !record(value.recommended_standard_array)) invalid('roster PHB 2024')
+
+  return {
+    schema_version: value.schema_version,
+    ruleset: typeof value.ruleset === 'string' ? value.ruleset : 'dnd-2024-phb',
+    edition: 2024,
+    supported_character_level: 1,
+    classes,
+    species,
+    backgrounds,
+    alignment_options: items(value.alignment_options),
+    ability_score_methods: {
+      standard_array: { id: String(standardArray.id), label: String(standardArray.label), values: standardArray.values as number[] },
+      point_buy: {
+        id: String(pointBuy.id), label: String(pointBuy.label), budget: Number(pointBuy.budget),
+        minimum: Number(pointBuy.minimum), maximum: Number(pointBuy.maximum),
+        costs: pointBuy.costs as Record<string, number>,
+      },
+      rolled: {
+        id: String(rolled.id), label: String(rolled.label), dice: String(rolled.dice),
+        drop_lowest: Number(rolled.drop_lowest), number_of_scores: Number(rolled.number_of_scores),
+      },
+      background_increases: {
+        patterns: backgroundIncreases.patterns as number[][],
+        eligible_source: String(backgroundIncreases.eligible_source),
+      },
+    },
+    recommended_standard_array: record(value.recommended_standard_array) ? value.recommended_standard_array as Record<string, Record<string, number>> : {},
+    abilities,
+    skills,
+    language_rules: {
+      required: stringArray(languageRules.required, 'idiomas obrigatórios PHB 2024'),
+      additional_choice_count: Number(languageRules.additional_choice_count),
+      additional_options: languageOptions,
+      selection_source: typeof languageRules.selection_source === 'string' ? languageRules.selection_source : '',
+    },
   }
 }
 
@@ -239,12 +378,24 @@ export async function loadCharacterOptions(signal?: AbortSignal): Promise<Charac
   return parseOptions(await request('/v1/character/options', undefined, signal))
 }
 
+export async function loadPHB2024CharacterOptions(signal?: AbortSignal): Promise<PHB2024CharacterOptions> {
+  return parsePHB2024Options(await request('/v2/character/options', undefined, signal))
+}
+
 export async function validateCharacter(payload: CharacterDraft, signal?: AbortSignal): Promise<CharacterValidation> {
   return parseValidation(await request('/v1/character/validate', payload, signal))
 }
 
+export async function validatePHB2024Character(payload: PHB2024CharacterDraft, signal?: AbortSignal): Promise<CharacterValidation> {
+  return parseValidation(await request('/v2/character/validate', payload, signal))
+}
+
 export async function createCharacter(payload: CharacterDraft, signal?: AbortSignal): Promise<CharacterCreation> {
   return parseCreation(await request('/v1/character/create', payload, signal))
+}
+
+export async function createPHB2024Character(payload: PHB2024CharacterDraft, signal?: AbortSignal): Promise<CharacterCreation> {
+  return parseCreation(await request('/v2/character/create', payload, signal))
 }
 
 export async function sendGameTurn(payload: GameTurnRequest, signal?: AbortSignal): Promise<GameTurnResponse> {

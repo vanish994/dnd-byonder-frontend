@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createCharacter, loadCharacterOptions, sendGameTurn, validateCharacter } from './game'
+import { createCharacter, createPHB2024Character, loadCharacterOptions, loadPHB2024CharacterOptions, sendGameTurn, validateCharacter, validatePHB2024Character } from './game'
 
 const catalog = {
   schema_version: 'character-options-v1',
@@ -43,6 +43,34 @@ const turn = {
 const request = { campaign_id: 'real-campaign-id', state: { character }, player_input: 'Entro na taverna.', action: null, available_actions: [] }
 const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json' } })
 
+const classIds2024 = ['barbarian', 'bard', 'cleric', 'druid', 'fighter', 'monk', 'paladin', 'ranger', 'rogue', 'sorcerer', 'warlock', 'wizard']
+const speciesIds2024 = ['aasimar', 'dragonborn', 'dwarf', 'elf', 'gnome', 'goliath', 'halfling', 'human', 'orc', 'tiefling']
+const backgroundIds2024 = ['acolyte', 'artisan', 'charlatan', 'criminal', 'entertainer', 'farmer', 'guard', 'guide', 'hermit', 'merchant', 'noble', 'sage', 'sailor', 'scribe', 'soldier', 'wayfarer']
+const phb2024Catalog = {
+  schema_version: 'character-options-phb2024-v1', ruleset: 'dnd-2024-phb', edition: 2024, supported_character_level: 1,
+  classes: classIds2024.map((id) => ({ id, label: id, source_name: id, levels: [1], hit_die: 8, primary_abilities: ['strength'],
+    skill_choices: { count: 1, options: ['athletics'] }, saving_throw_proficiencies: ['strength', 'constitution'],
+    weapon_proficiencies: ['simple'], armor_proficiencies: [], level_1_features: [{ id: `${id}_feature`, name: 'Feature' }],
+    equipment_packages: [{ id: 'A', items: [{ name: 'Pack', quantity: 1 }], gold_gp: 5 }] })),
+  species: speciesIds2024.map((id, index) => ({ id, label: id, source_name: id, choices: {},
+    ...(index === 0 ? { summary: ['NOT FOR PLAYER — OCR audit note'], details: { internal: true } } : {}) })),
+  backgrounds: backgroundIds2024.map((id) => ({ id, label: id, source_name: id, eligible_abilities: ['strength', 'dexterity', 'constitution'],
+    skill_proficiencies: ['athletics'], origin_feat: 'Tough', origin_feat_id: 'tough', origin_feat_label_pt_br: 'Robusto',
+    equipment_packages: [{ id: 'A', items: [{ name: 'Tool', quantity: 1 }], gold_gp: 10 }] })),
+  alignment_options: [{ id: 'neutral', label: 'Neutro' }], abilities: ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'],
+  skills: ['athletics'], recommended_standard_array: {},
+  ability_score_methods: { standard_array: { id: 'standard_array', label: 'Valores Padrão', values: [15, 14, 13, 12, 10, 8] },
+    point_buy: { id: 'point_buy', label: 'Compra por Pontos', budget: 27, minimum: 8, maximum: 15, costs: { '8': 0, '9': 1, '10': 2, '11': 3, '12': 4, '13': 5, '14': 7, '15': 9 } },
+    rolled: { id: 'rolled', label: 'Rolagem', dice: '4d6', drop_lowest: 1, number_of_scores: 6 }, background_increases: { patterns: [[2, 1], [1, 1, 1]], eligible_source: 'background' } },
+  language_rules: { required: ['common'], additional_choice_count: 2, additional_options: [{ id: 'dwarvish', label: 'Anão' }], selection_source: 'PHB2024' },
+}
+const draft2024 = {
+  name: 'Aria', class_id: 'barbarian', level: 1 as const, species_id: 'dwarf', species_choices: {}, background_id: 'farmer',
+  alignment_id: 'neutral', ability_method_id: 'standard_array' as const, base_abilities: { strength: 15, dexterity: 14, constitution: 13, intelligence: 12, wisdom: 10, charisma: 8 },
+  background_ability_increases: { strength: 2, constitution: 1 }, abilities: { strength: 17, dexterity: 14, constitution: 14, intelligence: 12, wisdom: 10, charisma: 8 },
+  skills: ['athletics'], language_choices: ['draconic', 'dwarvish'], class_equipment_option: 'A', background_equipment_option: 'A', class_choices: {},
+}
+
 describe('Gateway public game API', () => {
   afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs() })
 
@@ -54,6 +82,37 @@ describe('Gateway public game API', () => {
     expect(options.abilities[0]).toMatchObject({ name: 'Força', abbreviation: 'STR', description: 'Ações de força.' })
     expect(options.standard_array).toEqual(catalog.standard_array)
     expect(fetchMock).toHaveBeenCalledWith('https://gateway.example.com/v1/character/options', expect.objectContaining({ method: 'GET', signal: expect.any(AbortSignal) }))
+  })
+
+  it('carrega o roster PHB 2024 pela rota v2 e preserva as escolhas oficiais', async () => {
+    vi.stubEnv('VITE_GAME_API_URL', 'https://gateway.example.com')
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(json(phb2024Catalog))
+    const options = await loadPHB2024CharacterOptions()
+    expect(options.edition).toBe(2024)
+    expect(options.classes).toHaveLength(12)
+    expect(options.species).toHaveLength(10)
+    expect(options.species[0]).not.toHaveProperty('summary')
+    expect(options.species[0]).not.toHaveProperty('details')
+    expect(options.backgrounds).toHaveLength(16)
+    expect(options.ability_score_methods.point_buy.budget).toBe(27)
+    expect(options.classes[0].equipment_packages[0].id).toBe('A')
+    expect(fetchMock).toHaveBeenCalledWith('https://gateway.example.com/v2/character/options', expect.objectContaining({ method: 'GET' }))
+  })
+
+  it('valida e cria personagens pelo contrato v2 sem usar a rota legada', async () => {
+    vi.stubEnv('VITE_GAME_API_URL', 'https://gateway.example.com')
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(json({ valid: true, character, derived, rule_resolution: resolution, ruleset: 'dnd-2024-phb' }))
+      .mockResolvedValueOnce(json(created))
+    expect((await validatePHB2024Character(draft2024)).valid).toBe(true)
+    expect((await createPHB2024Character(draft2024)).campaign_id).toBe('real-campaign-id')
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      'https://gateway.example.com/v2/character/validate',
+      'https://gateway.example.com/v2/character/create',
+    ])
+    for (const [, init] of fetchMock.mock.calls) {
+      expect(JSON.parse(init?.body as string)).toEqual(draft2024)
+    }
   })
 
   it('envia a escolha, mostra somente os dados derivados validados e cria a sessão pelo Gateway', async () => {
