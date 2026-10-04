@@ -1,39 +1,32 @@
-import type { AbilityCheckAction } from '../types/game'
+import type { StructuredAction } from '../types/game'
 
 interface StructuredActionCardProps {
-  action: AbilityCheckAction
+  action: StructuredAction
   isLoading: boolean
-  onSubmit: (action: AbilityCheckAction) => Promise<boolean>
-}
-
-const abilityLabels: Record<string, string> = {
-  strength: 'Força',
-  dexterity: 'Destreza',
-  constitution: 'Constituição',
-  intelligence: 'Inteligência',
-  wisdom: 'Sabedoria',
-  charisma: 'Carisma',
+  onSubmit: (action: StructuredAction, text: string) => Promise<boolean>
 }
 
 export function StructuredActionCard({ action, isLoading, onSubmit }: StructuredActionCardProps) {
-  const abilityLabel = abilityLabels[action.ability] ?? action.ability
-  const modifier = action.modifier >= 0 ? `+${action.modifier}` : `${action.modifier}`
+  const label = typeof action.label === 'string' ? action.label
+    : typeof action.name === 'string' ? action.name : String(action.type)
+  const description = typeof action.description === 'string' ? action.description : null
+  const text = typeof action.player_input === 'string' && action.player_input.trim() ? action.player_input : label
 
   return (
     <section className="structured-action-card" aria-label="Ações estruturadas disponíveis">
       <div className="structured-action-card__copy">
         <span className="section-kicker"><span className="kicker-line" /> Ação disponível</span>
-        <h3>Arrombar a porta</h3>
-        <p>Teste de {abilityLabel} <span aria-hidden="true">•</span> CD {action.dc} <span aria-hidden="true">•</span> {modifier}</p>
+        <h3>{label}</h3>
+        {description && <p>{description}</p>}
       </div>
       <button
         type="button"
         className="structured-action-card__button"
-        onClick={() => void onSubmit(action)}
+        onClick={() => void onSubmit(action, text)}
         disabled={isLoading}
       >
-        {isLoading ? <span className="button-spinner" aria-label="Rolando" /> : <span aria-hidden="true">✦</span>}
-        <span>{isLoading ? 'Rolando' : 'Fazer teste'}</span>
+        {isLoading ? <span className="button-spinner" aria-label="Enviando" /> : <span aria-hidden="true">✦</span>}
+        <span>{isLoading ? 'Enviando' : 'Executar ação'}</span>
       </button>
     </section>
   )

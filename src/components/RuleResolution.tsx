@@ -9,7 +9,7 @@ function formatModifier(value: number) {
 }
 
 export function RuleResolution({ resolution }: RuleResolutionProps) {
-  if (!resolution || resolution.status !== 'resolved') return null
+  if (!resolution || resolution.status !== 'resolved' || resolution.action?.type === 'create_character') return null
   const check = resolution.check
   const roll = resolution.rolls?.[0]?.result
   const total = resolution.outcome?.total

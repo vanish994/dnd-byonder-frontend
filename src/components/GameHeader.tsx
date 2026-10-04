@@ -1,9 +1,10 @@
 interface GameHeaderProps {
   campaignId: string
   isLoading: boolean
+  hasSession: boolean
 }
 
-export function GameHeader({ campaignId, isLoading }: GameHeaderProps) {
+export function GameHeader({ campaignId, isLoading, hasSession }: GameHeaderProps) {
   return (
     <header className="game-header">
       <a className="brand-lockup" href="#adventure" aria-label="D&D Byonder — início da aventura">
@@ -20,10 +21,10 @@ export function GameHeader({ campaignId, isLoading }: GameHeaderProps) {
       <div className="header-actions">
         <div className="session-status" aria-live="polite">
           <span className={`status-dot ${isLoading ? 'is-thinking' : ''}`} aria-hidden="true" />
-          <span>{isLoading ? 'O mundo respira' : 'Sessão ativa'}</span>
-          <span className="session-id">{campaignId}</span>
+          <span>{isLoading ? 'O mundo respira' : hasSession ? 'Sessão ativa' : 'Preparando personagem'}</span>
+          {hasSession && <span className="session-id">{campaignId}</span>}
         </div>
-        <button className="icon-button" type="button" aria-label="Abrir menu da sessão" title="Menu da sessão">☰</button>
+        {hasSession && <span className="icon-button" aria-hidden="true">✦</span>}
       </div>
     </header>
   )
