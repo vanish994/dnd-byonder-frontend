@@ -4,9 +4,17 @@ import { GameHeader } from '../components/GameHeader'
 import { LoadingState } from '../components/LoadingState'
 import { NarrativePanel } from '../components/NarrativePanel'
 import { RuleResolution } from '../components/RuleResolution'
+import { StructuredActionCard } from '../components/StructuredActionCard'
 import { useGameSession } from '../state/useGameSession'
+import type { AbilityCheckAction } from '../types/game'
 
 const narrativeSuggestions = ['Explorar o ambiente', 'Investigar a estrada', 'Observar em silêncio']
+const availableAbilityCheck: AbilityCheckAction = {
+  type: 'ability_check',
+  ability: 'strength',
+  dc: 12,
+  modifier: 3,
+}
 
 export function Game() {
   const session = useGameSession()
@@ -36,6 +44,11 @@ export function Game() {
               <div><strong>{session.error.kind === 'timeout' ? 'O Mestre demorou mais que o esperado.' : 'A névoa interrompeu a sessão.'}</strong><p>{session.error.message}</p></div>
             </div>
           )}
+          <StructuredActionCard
+            action={availableAbilityCheck}
+            isLoading={session.isLoading}
+            onSubmit={(action) => session.sendAction('Tento arrombar a porta.', action)}
+          />
           <ActionInput isLoading={session.isLoading} onSubmit={session.sendAction} suggestions={narrativeSuggestions} />
         </div>
         <aside className="sidebar-column sidebar-column--right" aria-label="Recursos da sessão">

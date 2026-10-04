@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { GameApiError, sendGameTurn } from '../api/game'
-import type { GameState, NarrativeEntry, RuleResolution } from '../types/game'
+import type { GameState, NarrativeEntry, RuleResolution, StructuredAction } from '../types/game'
 
 const initialNarrative = 'A noite se fecha sobre a estrada. Ao longe, uma luz solitária pulsa entre as árvores.'
 
@@ -14,7 +14,7 @@ export function useGameSession() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<GameApiError | null>(null)
 
-  const sendAction = useCallback(async (playerInput: string) => {
+  const sendAction = useCallback(async (playerInput: string, action: StructuredAction | null = null) => {
     const text = playerInput.trim()
     if (!text || isLoading) return false
     setError(null)
@@ -26,7 +26,7 @@ export function useGameSession() {
         campaign_id: campaignId,
         state,
         player_input: text,
-        action: null,
+        action,
         available_actions: [],
       })
       setState(response.state)

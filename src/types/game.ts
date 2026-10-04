@@ -1,6 +1,13 @@
 export type GameState = Record<string, unknown>
 
-export type StructuredAction = Record<string, unknown>
+export interface AbilityCheckAction {
+  type: 'ability_check'
+  ability: string
+  dc: number
+  modifier: number
+}
+
+export type StructuredAction = AbilityCheckAction | Record<string, unknown>
 
 export interface GameTurnRequest {
   campaign_id: string
