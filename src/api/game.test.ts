@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createCharacter, createPHB2024Character, loadCharacterOptions, loadPHB2024CharacterOptions, sendGameTurn, validateCharacter, validatePHB2024Character } from './game'
+import { createCharacter, createPHB2024Character, loadCharacterOptions, loadGameSession, loadPHB2024CharacterOptions, sendGameTurn, validateCharacter, validatePHB2024Character } from './game'
 
 const catalog = {
   schema_version: 'character-options-v1',
@@ -33,14 +33,23 @@ const character = {
   current_hp: 11,
 }
 const resolution = { schema_version: 'rule-resolution-v1', status: 'resolved', action: { type: 'create_character' }, outcome: { derived } }
-const created = { character, derived, state: { character }, available_actions: [], campaign_id: 'real-campaign-id', rule_resolution: resolution }
+const sessionId = '550e8400-e29b-41d4-a716-446655440000'
+const sessionToken = 's'.repeat(43)
+const idempotencyKey = 'turn:client-generated-key-0001'
+const created = { character, derived, state: { character }, available_actions: [], campaign_id: 'real-campaign-id',
+  session_id: sessionId, revision: 0, rule_resolution: resolution }
 const turn = {
-  campaign_id: 'real-campaign-id', narration: 'Uma taverna surge no caminho.',
+  campaign_id: 'real-campaign-id', session_id: sessionId, revision: 1, narration: 'Uma taverna surge no caminho.',
   narration_status: 'unavailable',
   rule_resolution: { schema_version: 'rule-resolution-v1', status: 'needs_rule_validation', reason: 'not bound' },
   state: { character, scene: 'taverna' }, available_actions: [],
 }
-const request = { campaign_id: 'real-campaign-id', state: { character }, player_input: 'Entro na taverna.', action: null, available_actions: [] }
+const request = { session_id: sessionId, expected_revision: 0, player_input: 'Entro na taverna.', action: null }
+const resumed = {
+  campaign_id: 'real-campaign-id', session_id: sessionId, ruleset: 'dnd-2024-phb', revision: 0,
+  character, derived, state: { character }, available_actions: [],
+  history: [{ id: 'history-1', speaker: 'mestre', text: 'A aventura começa.', timestamp: 0 }],
+}
 const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json' } })
 
 const classIds2024 = ['barbarian', 'bard', 'cleric', 'druid', 'fighter', 'monk', 'paladin', 'ranger', 'rogue', 'sorcerer', 'warlock', 'wizard']
@@ -72,7 +81,7 @@ const draft2024 = {
 }
 
 describe('Gateway public game API', () => {
-  afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs() })
+  afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); sessionStorage.clear() })
 
   it('busca o catálogo público e extrai exclusivamente suas opções de classe, atributos, perícias e armas', async () => {
     vi.stubEnv('VITE_GAME_API_URL', 'https://gateway.example.com/')
@@ -105,7 +114,10 @@ describe('Gateway public game API', () => {
       .mockResolvedValueOnce(json({ valid: true, character, derived, rule_resolution: resolution, ruleset: 'dnd-2024-phb' }))
       .mockResolvedValueOnce(json(created))
     expect((await validatePHB2024Character(draft2024)).valid).toBe(true)
-    expect((await createPHB2024Character(draft2024)).campaign_id).toBe('real-campaign-id')
+    const creation = await createPHB2024Character(draft2024)
+    expect(creation.campaign_id).toBe('real-campaign-id')
+    expect(creation.session_id).toBe(sessionId)
+    expect(creation.session_token).toHaveLength(43)
     expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
       'https://gateway.example.com/v2/character/validate',
       'https://gateway.example.com/v2/character/create',
@@ -113,6 +125,12 @@ describe('Gateway public game API', () => {
     for (const [, init] of fetchMock.mock.calls) {
       expect(JSON.parse(init?.body as string)).toEqual(draft2024)
     }
+    expect(fetchMock.mock.calls[0]?.[1]?.headers).toEqual({ 'Content-Type': 'application/json' })
+    expect(fetchMock.mock.calls[1]?.[1]?.headers).toMatchObject({
+      'Content-Type': 'application/json',
+      'X-Session-Token': expect.any(String),
+      'Idempotency-Key': expect.stringMatching(/^create:/),
+    })
   })
 
   it('envia a escolha, mostra somente os dados derivados validados e cria a sessão pelo Gateway', async () => {
@@ -136,10 +154,13 @@ describe('Gateway public game API', () => {
   it('propaga state e available_actions reais sem inventar uma ação mecânica no turno', async () => {
     vi.stubEnv('VITE_GAME_API_URL', 'https://gateway.example.com')
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(json(turn))
-    const response = await sendGameTurn(request)
+    const response = await sendGameTurn(request, sessionToken, idempotencyKey)
     expect(response.narration).toBe('Uma taverna surge no caminho.')
     expect(response.narration_status).toBe('unavailable')
-    expect(fetchMock).toHaveBeenCalledWith('https://gateway.example.com/v1/game/turn', expect.objectContaining({ method: 'POST', body: JSON.stringify(request) }))
+    expect(fetchMock).toHaveBeenCalledWith('https://gateway.example.com/v1/game/turn', expect.objectContaining({
+      method: 'POST', body: JSON.stringify(request),
+      headers: { 'Content-Type': 'application/json', 'X-Session-Token': sessionToken, 'Idempotency-Key': idempotencyKey },
+    }))
   })
 
   it('consome rule-teaching-v1 sem alterar os campos mecânicos ou as ações autorizadas', async () => {
@@ -150,7 +171,7 @@ describe('Gateway public game API', () => {
       rule_teaching: { schema_version: 'rule-teaching-v1', tips: [{ id: 'check', title: 'Testes', text: 'O Mestre resolve o resultado.' }] },
     }))
 
-    const response = await sendGameTurn(request)
+    const response = await sendGameTurn(request, sessionToken, idempotencyKey)
 
     expect(response.rule_teaching).toEqual({ schema_version: 'rule-teaching-v1', tips: [{ id: 'check', title: 'Testes', text: 'O Mestre resolve o resultado.' }] })
     expect(response.rule_resolution).toEqual(turn.rule_resolution)
@@ -167,9 +188,9 @@ describe('Gateway public game API', () => {
       .mockResolvedValueOnce(json({ ...turn, rule_teaching: null }))
       .mockResolvedValueOnce(json({ ...turn, rule_teaching: { schema_version: 'rule-teaching-v1', tips: [] } }))
 
-    await expect(sendGameTurn(request)).resolves.toMatchObject({ rule_teaching: null })
-    await expect(sendGameTurn(request)).resolves.toMatchObject({ rule_teaching: null })
-    await expect(sendGameTurn(request)).resolves.toMatchObject({ rule_teaching: null })
+    await expect(sendGameTurn(request, sessionToken, idempotencyKey)).resolves.toMatchObject({ rule_teaching: null })
+    await expect(sendGameTurn(request, sessionToken, idempotencyKey)).resolves.toMatchObject({ rule_teaching: null })
+    await expect(sendGameTurn(request, sessionToken, idempotencyKey)).resolves.toMatchObject({ rule_teaching: null })
   })
 
   it('rejeita envelopes externos malformados em vez de aceitar qualquer objeto truthy', async () => {
@@ -180,7 +201,7 @@ describe('Gateway public game API', () => {
     await expect(loadCharacterOptions()).rejects.toMatchObject({ kind: 'invalid' })
     await expect(validateCharacter(draft)).rejects.toMatchObject({ kind: 'invalid' })
     await expect(createCharacter(draft)).rejects.toMatchObject({ kind: 'invalid' })
-    await expect(sendGameTurn(request)).rejects.toMatchObject({ kind: 'invalid' })
+    await expect(sendGameTurn(request, sessionToken, idempotencyKey)).rejects.toMatchObject({ kind: 'invalid' })
   })
 
   it('não expõe mensagens arbitrárias do upstream e conserva HTTP/status para feedback seguro', async () => {
@@ -190,7 +211,7 @@ describe('Gateway public game API', () => {
 
   it('orienta a escolher uma ação sugerida quando o Rule Engine rejeita um turno', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(json({ detail: 'invalid structured action' }, 422))
-    await expect(sendGameTurn(request)).rejects.toMatchObject({
+    await expect(sendGameTurn(request, sessionToken, idempotencyKey)).rejects.toMatchObject({
       kind: 'http',
       status: 422,
       message: 'Essa ação não pôde ser resolvida. Escolha uma sugestão do Mestre ou tente outra ação.',
@@ -200,5 +221,28 @@ describe('Gateway public game API', () => {
   it('classifica falha de rede de forma recuperável', async () => {
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'))
     await expect(loadCharacterOptions()).rejects.toMatchObject({ kind: 'network' })
+  })
+
+  it('retoma um snapshot PHB 2024 usando somente o token de sessão em header', async () => {
+    vi.stubEnv('VITE_GAME_API_URL', 'https://gateway.example.com')
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(json(resumed))
+    await expect(loadGameSession(sessionId, sessionToken)).resolves.toMatchObject({
+      campaign_id: 'real-campaign-id', revision: 0, ruleset: 'dnd-2024-phb', history: resumed.history,
+    })
+    expect(fetchMock).toHaveBeenCalledWith(`https://gateway.example.com/v1/sessions/${sessionId}`, expect.objectContaining({
+      method: 'GET', headers: { 'X-Session-Token': sessionToken },
+    }))
+  })
+
+  it('reutiliza token e chave de criação quando o cliente repete o mesmo payload após falha de rede', async () => {
+    vi.stubEnv('VITE_GAME_API_URL', 'https://gateway.example.com')
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce(json(created))
+    await expect(createPHB2024Character(draft2024)).rejects.toMatchObject({ kind: 'network' })
+    const firstHeaders = fetchMock.mock.calls[0]?.[1]?.headers
+    const creation = await createPHB2024Character(draft2024)
+    expect(fetchMock.mock.calls[1]?.[1]?.headers).toEqual(firstHeaders)
+    expect(creation.session_id).toBe(sessionId)
   })
 })

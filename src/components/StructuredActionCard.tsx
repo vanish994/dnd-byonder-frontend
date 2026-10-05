@@ -4,10 +4,11 @@ import type { StructuredAction } from '../types/game'
 interface StructuredActionCardProps {
   action: StructuredAction
   isLoading: boolean
+  disabled?: boolean
   onSubmit: (action: StructuredAction, text: string) => Promise<boolean>
 }
 
-export function StructuredActionCard({ action, isLoading, onSubmit }: StructuredActionCardProps) {
+export function StructuredActionCard({ action, isLoading, disabled = false, onSubmit }: StructuredActionCardProps) {
   const [distance, setDistance] = useState('')
   const label = typeof action.label === 'string' ? action.label
     : typeof action.name === 'string' ? action.name : String(action.type)
@@ -33,7 +34,7 @@ export function StructuredActionCard({ action, isLoading, onSubmit }: Structured
         type="button"
         className="structured-action-card__button"
         onClick={() => void submit()}
-        disabled={isLoading || !canSubmit}
+        disabled={isLoading || disabled || !canSubmit}
       >
         {isLoading ? <span className="button-spinner" aria-label="Enviando" /> : <span aria-hidden="true">✦</span>}
         <span>{isLoading ? 'Enviando' : 'Usar sugestão'}</span>
