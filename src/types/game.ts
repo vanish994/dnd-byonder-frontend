@@ -87,8 +87,22 @@ export interface PHB2024CharacterOptions {
   }
 }
 
+export interface AdventureCatalogItem {
+  id: string
+  title: string
+  source: string
+  recommended_level: number
+  estimated_sessions: string
+  environment: string
+  ruleset: 'dnd-2024-phb'
+  summary: string
+  entry_hook: string
+  initial_scene_id: string
+}
+
 export interface PHB2024CharacterDraft {
   name: string
+  adventure_id?: string
   class_id: string
   level: 1
   species_id: string

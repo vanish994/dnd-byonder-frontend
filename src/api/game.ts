@@ -2,7 +2,7 @@ import type {
   CatalogItem, CharacterClassOption, CharacterCreation, CharacterDraft, CharacterOptions,
   CharacterValidation, DerivedCharacter, GameTurnRequest, GameTurnResponse, PersistedCharacterCreation, RuleResolution, RuleTeaching, RuleTeachingTip,
   PHB2024BackgroundOption, PHB2024CharacterDraft, PHB2024CharacterOptions, PHB2024ClassOption,
-  PHB2024EquipmentPackage, PHB2024SpeciesOption, SessionResumeResponse, StoredGameSession,
+  PHB2024EquipmentPackage, PHB2024SpeciesOption, SessionResumeResponse, StoredGameSession, AdventureCatalogItem,
 } from '../types/game'
 
 const PUBLIC_GATEWAY_URL = 'https://dnd-byonder-gateway.onrender.com'
@@ -326,6 +326,19 @@ function parsePHB2024Options(value: unknown): PHB2024CharacterOptions {
   }
 }
 
+function parseAdventureCatalog(value: unknown): AdventureCatalogItem[] {
+  if (!record(value) || value.schema_version !== 'adventure-catalog-v1' ||
+    value.ruleset !== 'dnd-2024-phb' || !Array.isArray(value.adventures) || !value.adventures.length) invalid('o catálogo de aventuras')
+  return value.adventures.map((raw: unknown) => {
+    if (!record(raw) || typeof raw.id !== 'string' || typeof raw.title !== 'string' ||
+      typeof raw.source !== 'string' || raw.ruleset !== 'dnd-2024-phb' ||
+      !Number.isInteger(raw.recommended_level) || typeof raw.estimated_sessions !== 'string' ||
+      typeof raw.environment !== 'string' || typeof raw.summary !== 'string' ||
+      typeof raw.entry_hook !== 'string' || typeof raw.initial_scene_id !== 'string') invalid('o catálogo de aventuras')
+    return raw as unknown as AdventureCatalogItem
+  })
+}
+
 function parseDerived(value: unknown): DerivedCharacter {
   if (!record(value) || !numbers(value.ability_modifiers) || !numbers(value.saving_throw_modifiers) ||
     !numbers(value.skill_modifiers) || !Object.keys(value.ability_modifiers).length ||
@@ -503,6 +516,10 @@ export async function loadCharacterOptions(signal?: AbortSignal): Promise<Charac
 
 export async function loadPHB2024CharacterOptions(signal?: AbortSignal): Promise<PHB2024CharacterOptions> {
   return parsePHB2024Options(await request('/v2/character/options', undefined, signal))
+}
+
+export async function loadAdventureCatalog(signal?: AbortSignal): Promise<AdventureCatalogItem[]> {
+  return parseAdventureCatalog(await request('/v2/adventures', undefined, signal))
 }
 
 export async function validateCharacter(payload: CharacterDraft, signal?: AbortSignal): Promise<CharacterValidation> {

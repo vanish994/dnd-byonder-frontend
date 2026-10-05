@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import { createPHB2024Character, GameApiError, loadPHB2024CharacterOptions, validatePHB2024Character } from '../api/game'
+import { createPHB2024Character, GameApiError, loadAdventureCatalog, loadPHB2024CharacterOptions, validatePHB2024Character } from '../api/game'
 import type {
   PersistedCharacterCreation,
   CharacterValidation,
@@ -9,6 +9,7 @@ import type {
   PHB2024CharacterOptions,
   PHB2024EquipmentPackage,
   PHB2024SpeciesOption,
+  AdventureCatalogItem,
 } from '../types/game'
 
 interface CharacterWizardProps {
@@ -146,6 +147,8 @@ function grantedSpeciesSkills(species: PHB2024SpeciesOption | undefined, choices
 
 export function CharacterWizard({ onCreated }: CharacterWizardProps) {
   const [options, setOptions] = useState<PHB2024CharacterOptions | null>(null)
+  const [adventures, setAdventures] = useState<AdventureCatalogItem[]>([])
+  const [adventureId, setAdventureId] = useState('dragon-delves-death-at-sunset')
   const [loadingOptions, setLoadingOptions] = useState(true)
   const [step, setStep] = useState(0)
   const [name, setName] = useState('')
@@ -178,8 +181,14 @@ export function CharacterWizard({ onCreated }: CharacterWizardProps) {
     setLoadingOptions(true)
     setError(null)
     try {
-      const catalog = await loadPHB2024CharacterOptions(controller.signal)
-      if (!controller.signal.aborted) setOptions(catalog)
+      const [catalog, adventureCatalog] = await Promise.all([
+        loadPHB2024CharacterOptions(controller.signal), loadAdventureCatalog(controller.signal),
+      ])
+      if (!controller.signal.aborted) {
+        setOptions(catalog)
+        setAdventures(adventureCatalog)
+        setAdventureId((current) => adventureCatalog.some((adventure) => adventure.id === current) ? current : adventureCatalog[0]?.id ?? '')
+      }
     } catch (failure) {
       if (!controller.signal.aborted) setError(requestError(failure))
     } finally {
@@ -190,8 +199,14 @@ export function CharacterWizard({ onCreated }: CharacterWizardProps) {
   useEffect(() => {
     const controller = new AbortController()
     request.current = controller
-    void loadPHB2024CharacterOptions(controller.signal).then((catalog) => {
-      if (!controller.signal.aborted) setOptions(catalog)
+    void Promise.all([
+      loadPHB2024CharacterOptions(controller.signal), loadAdventureCatalog(controller.signal),
+    ]).then(([catalog, adventureCatalog]) => {
+      if (!controller.signal.aborted) {
+        setOptions(catalog)
+        setAdventures(adventureCatalog)
+        setAdventureId((current) => adventureCatalog.some((adventure) => adventure.id === current) ? current : adventureCatalog[0]?.id ?? '')
+      }
     }).catch((failure: unknown) => {
       if (!controller.signal.aborted) setError(requestError(failure))
     }).finally(() => {
@@ -310,6 +325,7 @@ export function CharacterWizard({ onCreated }: CharacterWizardProps) {
   function draft(): PHB2024CharacterDraft {
     return {
       name: name.trim(),
+      adventure_id: adventureId,
       class_id: classId,
       level: 1,
       species_id: speciesId,
@@ -355,6 +371,7 @@ export function CharacterWizard({ onCreated }: CharacterWizardProps) {
     for (const [ability, bonus] of Object.entries(increases)) final[ability] = (final[ability] ?? 0) + bonus
     return {
       name: preset.characterName,
+      adventure_id: adventureId,
       class_id: preset.classId,
       level: 1,
       species_id: preset.speciesId,
@@ -507,6 +524,20 @@ export function CharacterWizard({ onCreated }: CharacterWizardProps) {
                 <label className="wizard-label" htmlFor="character-name">Nome do personagem</label>
                 <input id="character-name" name="name" className="wizard-text" value={name} onChange={(event) => { setName(event.target.value); setPreview(null) }} maxLength={128} autoComplete="off" placeholder="Digite um nome" aria-describedby="name-help" />
                 <small id="name-help" className="wizard-help">O personagem começa no nível 1.</small>
+                <div className="adventure-catalog" aria-labelledby="adventure-catalog-title">
+                  <div className="adventure-catalog__heading">
+                    <span className="section-kicker"><span className="kicker-line" /> Catálogo de aventuras</span>
+                    <h3 id="adventure-catalog-title">Escolha onde sua história começa</h3>
+                  </div>
+                  <div className="adventure-catalog__grid">
+                    {adventures.map((adventure) => (
+                      <label key={adventure.id} className={`adventure-card ${adventure.id === adventureId ? 'is-selected' : ''}`}>
+                        <input type="radio" name="adventure" value={adventure.id} checked={adventure.id === adventureId} onChange={() => { setAdventureId(adventure.id); setPreview(null) }} />
+                        <span className="adventure-card__copy"><strong>{adventure.title}</strong><small>{adventure.source} · Nível {adventure.recommended_level} · {adventure.environment}</small><span>{adventure.summary}</span></span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
                 <div className="starter-presets" aria-labelledby="starter-presets-title">
                   <div className="starter-presets__heading">
                     <span className="section-kicker"><span className="kicker-line" /> Início rápido</span>

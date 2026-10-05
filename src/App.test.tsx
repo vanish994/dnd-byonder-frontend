@@ -41,6 +41,14 @@ const options = {
   },
   language_rules: { required: ['common'], additional_choice_count: 2, additional_options: Object.entries(languageLabels).map(([id, label]) => ({ id, label })), selection_source: 'PHB2024' },
 }
+const adventureCatalog = {
+  schema_version: 'adventure-catalog-v1', ruleset: 'dnd-2024-phb', adventures: [{
+    id: 'dragon-delves-death-at-sunset', title: 'Morte ao Pôr do Sol', source: 'Dragon Delves',
+    recommended_level: 1, estimated_sessions: '1-2', environment: 'floresta', ruleset: 'dnd-2024-phb',
+    summary: 'Uma investigação começa na Redwood Watch e segue em direção ao bosque.',
+    entry_hook: 'Você chega à Redwood Watch para investigar a corrupção e os desaparecimentos.', initial_scene_id: 'redwood-watch',
+  }],
+}
 const abilities = { strength: 17, dexterity: 15, constitution: 13, intelligence: 12, wisdom: 10, charisma: 8 }
 const baseAbilities = { strength: 15, dexterity: 14, constitution: 13, intelligence: 12, wisdom: 10, charisma: 8 }
 const startingEquipment = { items: [{ name: 'Pacote fighter kit', quantity: 1 }, { name: 'Espada longa', quantity: 1 }, { name: 'Origem farmer kit', quantity: 1 }, { name: 'Espada longa', quantity: 1 }], gold_gp: 20 }
@@ -89,6 +97,7 @@ function mockGateway({
       if (failOptions && optionsRequests === 1) return json({ error: 'temporarily unavailable' }, 503)
       return json(options)
     }
+    if (path === '/v2/adventures') return json(adventureCatalog)
     if (path === '/v2/character/validate') {
       validations++
       if (failValidate && validations === 1) return json({ error: { message: 'private-backend-info' } }, 422)
@@ -176,7 +185,7 @@ async function toSummary() {
 }
 
 const expectedDraft = {
-  name: 'Aria', class_id: 'fighter', level: 1, species_id: 'dwarf', species_choices: {}, background_id: 'farmer',
+  name: 'Aria', adventure_id: 'dragon-delves-death-at-sunset', class_id: 'fighter', level: 1, species_id: 'dwarf', species_choices: {}, background_id: 'farmer',
   alignment_id: 'neutral_good', ability_method_id: 'standard_array', base_abilities: baseAbilities,
   background_ability_increases: { strength: 2, dexterity: 1 }, abilities,
   skills: ['athletics', 'persuasion'], language_choices: ['draconic', 'dwarvish'],
@@ -196,7 +205,7 @@ describe('criação guiada PHB 2024 e sessão', () => {
     expect(screen.getByText('Preparando personagem')).toBeInTheDocument()
     expect(screen.queryByText('Sessão ativa')).not.toBeInTheDocument()
     expect(screen.queryByText('Aventureiro sem nome')).not.toBeInTheDocument()
-    expect(fetchMock.mock.calls.map(([url]) => new URL(String(url)).pathname)).toEqual(['/v2/character/options'])
+    expect(fetchMock.mock.calls.map(([url]) => new URL(String(url)).pathname)).toEqual(['/v2/character/options', '/v2/adventures'])
   })
 
   it('oferece Guerreiro, Mago e Clérigo como fichas prontas e valida o preset no Backend', async () => {

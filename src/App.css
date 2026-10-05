@@ -241,6 +241,15 @@
 .wizard-text { max-width: 480px; }
 .wizard-help { display: block; margin-top: 12px; color: var(--paper-muted); font-size: 11px; line-height: 1.5; }
 .starter-presets { margin-top: 30px; padding-top: 22px; border-top: 1px solid var(--line); }
+.adventure-catalog { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--line); }
+.adventure-catalog__heading h3 { margin: 10px 0 6px; color: var(--paper); font: 500 18px 'Cinzel', Georgia, serif; }
+.adventure-catalog__grid { display: grid; gap: 10px; margin-top: 15px; }
+.adventure-card { display: flex; align-items: flex-start; gap: 10px; min-height: 76px; padding: 12px; color: var(--paper); background: rgba(11, 12, 14, .42); border: 1px solid var(--line); cursor: pointer; }
+.adventure-card.is-selected, .adventure-card:focus-within { border-color: var(--bronze-light); background: rgba(168, 118, 62, .14); }
+.adventure-card input { width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--bronze-light); }
+.adventure-card__copy { display: grid; min-width: 0; gap: 4px; }
+.adventure-card__copy strong { color: var(--paper); font: 500 15px 'Cinzel', Georgia, serif; }
+.adventure-card__copy small, .adventure-card__copy span { color: var(--paper-muted); font-size: 11px; line-height: 1.4; }
 .starter-presets__heading h3 { margin: 10px 0 6px; color: var(--paper); font: 500 18px 'Cinzel', Georgia, serif; }
 .starter-presets__heading p { max-width: 58ch; margin: 0; color: var(--paper-muted); font-size: 12px; line-height: 1.55; }
 .starter-presets__grid { display: grid; gap: 10px; margin-top: 17px; }
