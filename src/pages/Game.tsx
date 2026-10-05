@@ -19,7 +19,7 @@ export function Game() {
       <div className="dragon-trace dragon-trace--top" aria-hidden="true" />
       <div className="dragon-trace dragon-trace--bottom" aria-hidden="true" />
       <GameHeader campaignId={session.campaignId} isLoading={session.isLoading} hasSession={session.hasSession} />
-      {!session.hasSession ? <main className="wizard-layout"><CharacterWizard onCreated={session.startSession} /></main> : <main className="game-layout">
+      {session.isRestoring ? <main className="wizard-layout"><LoadingState /></main> : !session.hasSession ? <main className="wizard-layout"><CharacterWizard onCreated={session.startSession} /></main> : <main className="game-layout">
         <aside className="sidebar-column sidebar-column--left">
           <CharacterSummary state={session.state} character={session.character} classLabel={session.classLabel} derived={session.derived} />
           <div className="world-card">
@@ -39,7 +39,9 @@ export function Game() {
               <div className="error-banner" role="alert">
                 <span className="error-icon">!</span>
                 <div><strong>{session.error.kind === 'timeout' ? 'O Mestre demorou mais que o esperado.' : 'A névoa interrompeu a sessão.'}</strong><p>{session.error.message}</p>
-                  {session.failedTurn && <button className="error-retry" type="button" disabled={session.isLoading} onClick={() => void session.retryTurn()}>Tentar turno novamente</button>}
+                  {session.error.status === 409 && <button className="error-retry" type="button" disabled={session.isRestoring} onClick={() => void session.retryResume()}>Sincronizar sessão</button>}
+                  {session.failedTurn && session.error.status !== 409 && <button className="error-retry" type="button" disabled={session.isLoading} onClick={() => void session.retryTurn()}>Tentar turno novamente</button>}
+                  {!session.failedTurn && session.sessionId && !session.sessionReady && <button className="error-retry" type="button" disabled={session.isRestoring} onClick={() => void session.retryResume()}>Tentar retomar sessão</button>}
                 </div>
               </div>
             )}
@@ -56,10 +58,11 @@ export function Game() {
                 key={`${String(action.type)}-${index}`}
                 action={action}
                 isLoading={session.isLoading}
+                disabled={!session.sessionReady}
                 onSubmit={(selected, text) => session.sendAction(text, selected)}
               />)}
             </section>}
-            <ActionInput isLoading={session.isLoading} onSubmit={session.sendAction} />
+            <ActionInput isLoading={session.isLoading} disabled={!session.sessionReady} onSubmit={session.sendAction} />
           </div>
         </div>
         <aside className="sidebar-column sidebar-column--right" aria-label="Recursos da sessão">

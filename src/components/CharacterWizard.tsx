@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { createPHB2024Character, GameApiError, loadPHB2024CharacterOptions, validatePHB2024Character } from '../api/game'
 import type {
-  CharacterCreation,
+  PersistedCharacterCreation,
   CharacterValidation,
   PHB2024BackgroundOption,
   PHB2024CharacterDraft,
@@ -12,7 +12,7 @@ import type {
 } from '../types/game'
 
 interface CharacterWizardProps {
-  onCreated: (created: CharacterCreation, classLabel: string) => Promise<boolean>
+  onCreated: (created: PersistedCharacterCreation, classLabel: string) => Promise<boolean>
 }
 
 const steps = ['Nome', 'Classe', 'Espécie', 'Origem', 'Atributos', 'Perícias', 'Itens', 'Resumo']

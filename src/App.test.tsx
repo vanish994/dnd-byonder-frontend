@@ -55,7 +55,8 @@ const derived = {
   hp: { current: 11, max: 11 }, ac: { value: 12, source: 'unarmored' }, initiative_modifier: 2,
 }
 const resolution = { schema_version: 'rule-resolution-v1', status: 'resolved', action: { type: 'create_character' }, outcome: { derived } }
-const action = { type: 'ability_check', ability: 'strength', dc: 12, modifier: 3 }
+const action = { type: 'ability_check', ability: 'strength', dc: 12, modifier: 3, label: 'Teste de Força', player_input: 'Faço um teste de Força.' }
+const sessionId = '550e8400-e29b-41d4-a716-446655440000'
 const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json' } })
 
 function mockGateway({
@@ -63,6 +64,7 @@ function mockGateway({
   failValidate = false,
   failCreate = false,
   failTurn = false,
+  conflictTurn = false,
   actions = [] as Array<Record<string, unknown>>,
   ruleTeaching,
   narrationStatus = 'available',
@@ -71,6 +73,7 @@ function mockGateway({
   failValidate?: boolean
   failCreate?: boolean
   failTurn?: boolean
+  conflictTurn?: boolean
   actions?: Array<Record<string, unknown>>
   ruleTeaching?: unknown
   narrationStatus?: 'available' | 'unavailable'
@@ -94,12 +97,20 @@ function mockGateway({
     if (path === '/v2/character/create') {
       creations++
       if (failCreate && creations === 1) return json({ error: { message: 'private-backend-info' } }, 502)
-      return json({ character, derived, rule_resolution: resolution, ruleset: 'dnd-2024-phb', campaign_id: 'campaign-created', state: { character }, available_actions: actions })
+      return json({ character, derived, rule_resolution: resolution, ruleset: 'dnd-2024-phb', campaign_id: 'campaign-created',
+        session_id: sessionId, revision: 0, state: { character }, available_actions: actions })
+    }
+    if (path === `/v1/sessions/${sessionId}`) {
+      return json({ campaign_id: 'campaign-created', session_id: sessionId, ruleset: 'dnd-2024-phb', revision: 4,
+        character, derived, state: { character, scene: { id: 'resume-scene' } }, available_actions: actions,
+        history: [{ id: 'resume-history-1', speaker: 'mestre', text: 'A campanha retomada.', timestamp: 0 }] })
     }
     if (path === '/v1/game/turn') {
       turns++
+      if (conflictTurn && turns === 1) return json({ error: { message: 'stale revision' } }, 409)
       if (failTurn && turns === 1) return json({ error: { message: 'upstream secret' } }, 502)
-      return json({ campaign_id: 'campaign-created', narration: turns === 1 ? 'A aventura começou.' : 'O Mestre responde ao seu gesto.',
+      return json({ campaign_id: 'campaign-created', session_id: sessionId, revision: turns,
+        narration: turns === 1 ? 'A aventura começou.' : 'O Mestre responde ao seu gesto.',
         narration_status: narrationStatus,
         rule_resolution: { schema_version: 'rule-resolution-v1', status: 'needs_rule_validation' },
         state: { character, scene: 'abertura' }, available_actions: actions,
@@ -173,7 +184,7 @@ const expectedDraft = {
 }
 
 describe('criação guiada PHB 2024 e sessão', () => {
-  afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs() })
+  afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); sessionStorage.clear() })
 
   it('inicia pelo wizard, carrega o catálogo PHB 2024 pelo Gateway e não mostra ficha/sessão fictícia', async () => {
     vi.stubEnv('VITE_GAME_API_URL', 'https://gateway.example.com')
@@ -208,7 +219,7 @@ describe('criação guiada PHB 2024 e sessão', () => {
     expect(JSON.parse(validation?.[1]?.body as string)).toEqual(expectedDraft)
   })
 
-  it('cria o personagem, usa campanha/state/actions retornados e inicia o turno pelo fluxo existente', async () => {
+  it('cria a sessão C2 e envia ao turno apenas o comando, session_id e revisão esperada', async () => {
     const fetchMock = mockGateway({ actions: [action] })
     render(<App />)
     await toSummary()
@@ -221,13 +232,20 @@ describe('criação guiada PHB 2024 e sessão', () => {
     expect(screen.getByText('—')).toBeInTheDocument()
     expect(screen.getByText('Anão · Fazendeiro · Neutro e Bom')).toBeInTheDocument()
     const firstTurn = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/v1/game/turn'))
-    expect(JSON.parse(firstTurn?.[1]?.body as string)).toEqual({ campaign_id: 'campaign-created', state: { character },
-      player_input: 'Começar a aventura.', action: null, available_actions: [action] })
+    expect(JSON.parse(firstTurn?.[1]?.body as string)).toEqual({
+      session_id: sessionId, expected_revision: 0, player_input: 'Começar a aventura.', action: null,
+    })
+    expect(firstTurn?.[1]?.headers).toMatchObject({
+      'X-Session-Token': expect.any(String), 'Idempotency-Key': expect.stringMatching(/^turn:/),
+    })
     fireEvent.click(screen.getByRole('button', { name: 'Usar sugestão' }))
     await screen.findByText('O Mestre responde ao seu gesto.')
     const turns = fetchMock.mock.calls.filter(([url]) => String(url).endsWith('/v1/game/turn'))
-    expect(JSON.parse(turns[1][1]?.body as string).action).toEqual(action)
-    expect(JSON.parse(turns[1][1]?.body as string).available_actions).toEqual([action])
+    expect(JSON.parse(turns[1][1]?.body as string)).toEqual({
+      session_id: sessionId, expected_revision: 1, player_input: 'Faço um teste de Força.', action,
+    })
+    expect(JSON.parse(turns[1][1]?.body as string)).not.toHaveProperty('state')
+    expect(JSON.parse(turns[1][1]?.body as string)).not.toHaveProperty('available_actions')
   })
 
   it('mostra a orientação mesmo quando a narrativa falha e mantém as ações do Backend como autoridade', async () => {
@@ -285,6 +303,18 @@ describe('criação guiada PHB 2024 e sessão', () => {
     expect(fetchMock.mock.calls.filter(([url]) => String(url).endsWith('/v1/game/turn'))).toHaveLength(2)
   })
 
+  it('bloqueia novas ações em conflito 409 até sincronizar o snapshot do servidor', async () => {
+    mockGateway({ actions: [action], conflictTurn: true })
+    render(<App />)
+    await toSummary()
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar personagem' }))
+    const syncButton = await screen.findByRole('button', { name: 'Sincronizar sessão' })
+    expect(await screen.findByRole('button', { name: 'Usar sugestão' })).toBeDisabled()
+    fireEvent.click(syncButton)
+    await screen.findByText('A campanha retomada.')
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Usar sugestão' })).toBeEnabled())
+  })
+
   it('ao recarregar volta a um wizard vazio em vez de fabricar personagem ou pontos de vida', async () => {
     mockGateway()
     const view = render(<App />)
@@ -295,5 +325,20 @@ describe('criação guiada PHB 2024 e sessão', () => {
     expect(await screen.findByRole('textbox', { name: 'Nome do personagem' })).toHaveValue('')
     await waitFor(() => expect(screen.getByText('Preparando personagem')).toBeInTheDocument())
     expect(screen.queryByText('11/11')).not.toBeInTheDocument()
+  })
+
+  it('retoma a sessão salva com o estado canônico e histórico do Backend', async () => {
+    const token = 't'.repeat(43)
+    sessionStorage.setItem('byonder.active-session.v1', JSON.stringify({
+      campaign_id: 'campaign-created', session_id: sessionId, session_token: token, revision: 2, class_label: 'Guerreiro',
+    }))
+    const fetchMock = mockGateway({ actions: [action] })
+    render(<App />)
+    expect(await screen.findByText('A campanha retomada.')).toBeInTheDocument()
+    expect(screen.getByText('Sessão ativa')).toBeInTheDocument()
+    expect(screen.getByText('Aria')).toBeInTheDocument()
+    const resumeCall = fetchMock.mock.calls.find(([url]) => String(url).endsWith(`/v1/sessions/${sessionId}`))
+    expect(resumeCall?.[1]).toMatchObject({ method: 'GET', headers: { 'X-Session-Token': token } })
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/v1/game/turn'))).toBe(false)
   })
 })

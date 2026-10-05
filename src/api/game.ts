@@ -1,14 +1,96 @@
 import type {
   CatalogItem, CharacterClassOption, CharacterCreation, CharacterDraft, CharacterOptions,
-  CharacterValidation, DerivedCharacter, GameTurnRequest, GameTurnResponse, RuleResolution, RuleTeaching, RuleTeachingTip,
+  CharacterValidation, DerivedCharacter, GameTurnRequest, GameTurnResponse, PersistedCharacterCreation, RuleResolution, RuleTeaching, RuleTeachingTip,
   PHB2024BackgroundOption, PHB2024CharacterDraft, PHB2024CharacterOptions, PHB2024ClassOption,
-  PHB2024EquipmentPackage, PHB2024SpeciesOption,
+  PHB2024EquipmentPackage, PHB2024SpeciesOption, SessionResumeResponse, StoredGameSession,
 } from '../types/game'
 
 const PUBLIC_GATEWAY_URL = 'https://dnd-byonder-gateway.onrender.com'
 
 function getApiUrl() {
   return (import.meta.env.VITE_GAME_API_URL ?? PUBLIC_GATEWAY_URL).replace(/\/$/, '')
+}
+
+const ACTIVE_SESSION_KEY = 'byonder.active-session.v1'
+const PENDING_CREATION_KEY = 'byonder.pending-phb2024-creation.v1'
+const SESSION_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+interface PendingCreation {
+  fingerprint: string
+  session_token: string
+  idempotency_key: string
+}
+
+let memoryPendingCreation: PendingCreation | null = null
+let memoryStoredSession: StoredGameSession | null = null
+
+function randomOpaqueToken() {
+  const bytes = globalThis.crypto.getRandomValues(new Uint8Array(32))
+  let binary = ''
+  bytes.forEach((byte) => { binary += String.fromCharCode(byte) })
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
+export function createIdempotencyKey(prefix = 'turn') {
+  return `${prefix}:${randomOpaqueToken()}`
+}
+
+export function readStoredGameSession(): StoredGameSession | null {
+  try {
+    const raw = sessionStorage.getItem(ACTIVE_SESSION_KEY)
+    if (!raw) {
+      memoryStoredSession = null
+      return null
+    }
+    const value: unknown = raw ? JSON.parse(raw) : null
+    if (record(value) && typeof value.campaign_id === 'string' && typeof value.session_id === 'string' &&
+      SESSION_ID_PATTERN.test(value.session_id) && typeof value.session_token === 'string' &&
+      value.session_token.length >= 32 && Number.isInteger(value.revision) &&
+      typeof value.class_label === 'string') {
+      memoryStoredSession = value as unknown as StoredGameSession
+      return memoryStoredSession
+    }
+  } catch {
+    // Storage may be unavailable in restrictive browser contexts; the in-memory session still works.
+  }
+  return memoryStoredSession
+}
+
+export function persistGameSession(value: StoredGameSession) {
+  memoryStoredSession = value
+  try { sessionStorage.setItem(ACTIVE_SESSION_KEY, JSON.stringify(value)) } catch {
+    // Keep the current tab usable if storage is disabled.
+  }
+}
+
+function pendingCreationFor(payload: PHB2024CharacterDraft): PendingCreation {
+  const fingerprint = JSON.stringify(payload)
+  let previous = memoryPendingCreation
+  try {
+    const raw = sessionStorage.getItem(PENDING_CREATION_KEY)
+    const stored: unknown = raw ? JSON.parse(raw) : null
+    if (record(stored) && typeof stored.fingerprint === 'string' &&
+      typeof stored.session_token === 'string' && typeof stored.idempotency_key === 'string') {
+      previous = stored as unknown as PendingCreation
+    }
+  } catch {
+    // Fall back to this tab's in-memory pending request.
+  }
+  const pending = previous?.fingerprint === fingerprint ? previous : {
+    fingerprint,
+    session_token: randomOpaqueToken(),
+    idempotency_key: createIdempotencyKey('create'),
+  }
+  memoryPendingCreation = pending
+  try { sessionStorage.setItem(PENDING_CREATION_KEY, JSON.stringify(pending)) } catch {
+    // The request remains retryable in memory for the lifetime of this tab.
+  }
+  return pending
+}
+
+function clearPendingCreation() {
+  memoryPendingCreation = null
+  try { sessionStorage.removeItem(PENDING_CREATION_KEY) } catch { /* Storage is optional. */ }
 }
 
 export class GameApiError extends Error {
@@ -321,19 +403,55 @@ function parseCreation(value: unknown): CharacterCreation {
   }
 }
 
+function parsePersistedCreation(value: unknown, sessionToken: string): PersistedCharacterCreation {
+  const creation = parseCreation(value)
+  if (!record(value) || typeof value.session_id !== 'string' || !SESSION_ID_PATTERN.test(value.session_id) ||
+    value.revision !== 0) invalid('uma sessão persistida')
+  return { ...creation, session_id: value.session_id, revision: value.revision, session_token: sessionToken }
+}
+
+function parseSessionResume(value: unknown): SessionResumeResponse {
+  if (!record(value) || typeof value.campaign_id !== 'string' || !value.campaign_id ||
+    typeof value.session_id !== 'string' || !SESSION_ID_PATTERN.test(value.session_id) ||
+    value.ruleset !== 'dnd-2024-phb' || !Number.isInteger(value.revision) || (value.revision as number) < 0 ||
+    !record(value.character) || !record(value.state) || !Array.isArray(value.history)) {
+    invalid('uma sessão retomada')
+  }
+  const history = value.history.map((entry: unknown) => {
+    if (!record(entry) || typeof entry.id !== 'string' ||
+      (entry.speaker !== 'mestre' && entry.speaker !== 'voce') || typeof entry.text !== 'string' ||
+      !Number.isFinite(entry.timestamp)) invalid('o histórico da sessão')
+    return entry as unknown as SessionResumeResponse['history'][number]
+  })
+  return {
+    campaign_id: value.campaign_id,
+    session_id: value.session_id,
+    ruleset: 'dnd-2024-phb',
+    revision: value.revision as number,
+    character: value.character,
+    derived: parseDerived(value.derived),
+    state: value.state,
+    available_actions: actions(value.available_actions),
+    history,
+  }
+}
+
 function parseTurn(value: unknown): GameTurnResponse {
   if (!record(value) || typeof value.campaign_id !== 'string' || !value.campaign_id ||
+    typeof value.session_id !== 'string' || !SESSION_ID_PATTERN.test(value.session_id) ||
+    !Number.isInteger(value.revision) || (value.revision as number) < 1 ||
     typeof value.narration !== 'string' || !record(value.state) ||
     (value.narration_status !== undefined && value.narration_status !== 'available' && value.narration_status !== 'unavailable')) {
     invalid('um turno')
   }
-  return { campaign_id: value.campaign_id, narration: value.narration, narration_status: value.narration_status ?? 'available',
+  return { campaign_id: value.campaign_id, session_id: value.session_id, revision: value.revision as number,
+    narration: value.narration, narration_status: value.narration_status ?? 'available',
     state: value.state,
     available_actions: actions(value.available_actions), rule_resolution: parseResolution(value.rule_resolution),
     rule_teaching: parseRuleTeaching(value.rule_teaching) }
 }
 
-async function request(path: string, payload?: unknown, signal?: AbortSignal): Promise<unknown> {
+async function request(path: string, payload?: unknown, signal?: AbortSignal, headers: Record<string, string> = {}): Promise<unknown> {
   const controller = new AbortController()
   const timeout = window.setTimeout(() => controller.abort(), 30_000)
   const onAbort = () => controller.abort()
@@ -342,7 +460,10 @@ async function request(path: string, payload?: unknown, signal?: AbortSignal): P
   try {
     const response = await fetch(`${getApiUrl()}${path}`, {
       method: payload === undefined ? 'GET' : 'POST',
-      ...(payload === undefined ? {} : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }),
+      ...(payload === undefined && !Object.keys(headers).length ? {} : {
+        headers: { ...(payload === undefined ? {} : { 'Content-Type': 'application/json' }), ...headers },
+      }),
+      ...(payload === undefined ? {} : { body: JSON.stringify(payload) }),
       signal: controller.signal,
     })
 
@@ -350,6 +471,8 @@ async function request(path: string, payload?: unknown, signal?: AbortSignal): P
       // Do not echo arbitrary upstream error bodies or secrets into the browser.
       const message = response.status === 422 && path === '/v1/game/turn'
         ? 'Essa ação não pôde ser resolvida. Escolha uma sugestão do Mestre ou tente outra ação.'
+        : response.status === 409 && path === '/v1/game/turn'
+          ? 'A sessão mudou antes da conclusão deste turno. Retome a sessão para sincronizar e tente novamente.'
         : response.status === 400 || response.status === 422
           ? 'Confira as escolhas do personagem e tente novamente.'
         : response.status === 429 ? 'Muitas tentativas. Aguarde um momento e tente novamente.'
@@ -394,10 +517,37 @@ export async function createCharacter(payload: CharacterDraft, signal?: AbortSig
   return parseCreation(await request('/v1/character/create', payload, signal))
 }
 
-export async function createPHB2024Character(payload: PHB2024CharacterDraft, signal?: AbortSignal): Promise<CharacterCreation> {
-  return parseCreation(await request('/v2/character/create', payload, signal))
+export async function createPHB2024Character(payload: PHB2024CharacterDraft, signal?: AbortSignal): Promise<PersistedCharacterCreation> {
+  const pending = pendingCreationFor(payload)
+  const creation = parsePersistedCreation(await request('/v2/character/create', payload, signal, {
+    'X-Session-Token': pending.session_token,
+    'Idempotency-Key': pending.idempotency_key,
+  }), pending.session_token)
+  persistGameSession({
+    campaign_id: creation.campaign_id,
+    session_id: creation.session_id,
+    session_token: creation.session_token,
+    revision: creation.revision,
+    class_label: payload.class_id,
+  })
+  clearPendingCreation()
+  return creation
 }
 
-export async function sendGameTurn(payload: GameTurnRequest, signal?: AbortSignal): Promise<GameTurnResponse> {
-  return parseTurn(await request('/v1/game/turn', payload, signal))
+export async function loadGameSession(sessionId: string, sessionToken: string, signal?: AbortSignal): Promise<SessionResumeResponse> {
+  return parseSessionResume(await request(`/v1/sessions/${encodeURIComponent(sessionId)}`, undefined, signal, {
+    'X-Session-Token': sessionToken,
+  }))
+}
+
+export async function sendGameTurn(
+  payload: GameTurnRequest,
+  sessionToken: string,
+  idempotencyKey: string,
+  signal?: AbortSignal,
+): Promise<GameTurnResponse> {
+  return parseTurn(await request('/v1/game/turn', payload, signal, {
+    'X-Session-Token': sessionToken,
+    'Idempotency-Key': idempotencyKey,
+  }))
 }

@@ -3,16 +3,17 @@ import type { FormEvent } from 'react'
 
 interface ActionInputProps {
   isLoading: boolean
+  disabled?: boolean
   onSubmit: (value: string) => Promise<boolean>
   suggestions?: string[]
 }
 
-export function ActionInput({ isLoading, onSubmit, suggestions = [] }: ActionInputProps) {
+export function ActionInput({ isLoading, disabled = false, onSubmit, suggestions = [] }: ActionInputProps) {
   const [value, setValue] = useState('')
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!value.trim() || isLoading) return
+    if (!value.trim() || isLoading || disabled) return
     const sent = await onSubmit(value)
     if (sent) setValue('')
   }
@@ -35,7 +36,7 @@ export function ActionInput({ isLoading, onSubmit, suggestions = [] }: ActionInp
         <div className="suggested-actions" aria-label="Sugestões de ação">
           <span className="suggested-label">Você pode</span>
           {suggestions.map((suggestion) => (
-            <button type="button" className="suggested-action" key={suggestion} onClick={() => chooseSuggestion(suggestion)} disabled={isLoading}>
+            <button type="button" className="suggested-action" key={suggestion} onClick={() => chooseSuggestion(suggestion)} disabled={isLoading || disabled}>
               {suggestion}
             </button>
           ))}
@@ -51,9 +52,9 @@ export function ActionInput({ isLoading, onSubmit, suggestions = [] }: ActionInp
           placeholder="Descreva sua próxima ação..."
             rows={2}
             maxLength={4000}
-            disabled={isLoading}
+            disabled={isLoading || disabled}
           />
-          <button type="submit" disabled={isLoading || !value.trim()}>
+          <button type="submit" disabled={isLoading || disabled || !value.trim()}>
             {isLoading ? <span className="button-spinner" aria-label="Enviando" /> : <span className="send-arrow" aria-hidden="true">↗</span>}
             <span>{isLoading ? 'Enviando' : 'Enviar'}</span>
           </button>

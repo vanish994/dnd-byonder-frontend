@@ -142,12 +142,17 @@ export interface CharacterCreation {
   rule_resolution: RuleResolution
 }
 
+export interface PersistedCharacterCreation extends CharacterCreation {
+  session_id: string
+  revision: number
+  session_token: string
+}
+
 export interface GameTurnRequest {
-  campaign_id: string
-  state: GameState
+  session_id: string
+  expected_revision: number
   player_input: string
   action: StructuredAction | null
-  available_actions: StructuredAction[]
 }
 
 export interface RuleResolution {
@@ -188,12 +193,34 @@ export interface RuleTeaching {
 
 export interface GameTurnResponse {
   campaign_id: string
+  session_id: string
+  revision: number
   narration: string
   narration_status: 'available' | 'unavailable'
   rule_resolution: RuleResolution
   state: GameState
   available_actions: StructuredAction[]
   rule_teaching: RuleTeaching | null
+}
+
+export interface SessionResumeResponse {
+  campaign_id: string
+  session_id: string
+  ruleset: 'dnd-2024-phb'
+  revision: number
+  character: Record<string, unknown>
+  derived: DerivedCharacter
+  state: GameState
+  available_actions: StructuredAction[]
+  history: NarrativeEntry[]
+}
+
+export interface StoredGameSession {
+  campaign_id: string
+  session_id: string
+  session_token: string
+  revision: number
+  class_label: string
 }
 
 export interface NarrativeEntry {
