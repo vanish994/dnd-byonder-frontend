@@ -9,13 +9,14 @@ import type {
   PHB2024CharacterOptions,
   PHB2024EquipmentPackage,
   PHB2024SpeciesOption,
+  CampaignSetup,
 } from '../types/game'
 
 interface CharacterWizardProps {
   onCreated: (created: PersistedCharacterCreation, classLabel: string) => Promise<boolean>
 }
 
-const steps = ['Nome', 'Classe', 'Espécie', 'Origem', 'Atributos', 'Perícias', 'Itens', 'Resumo']
+const steps = ['Campanha', 'Classe', 'Espécie', 'Origem', 'Atributos', 'Perícias', 'Itens', 'Resumo']
 const ABILITY_NAMES: Record<string, string> = {
   strength: 'Força', dexterity: 'Destreza', constitution: 'Constituição',
   intelligence: 'Inteligência', wisdom: 'Sabedoria', charisma: 'Carisma',
@@ -109,6 +110,10 @@ export function CharacterWizard({ onCreated }: CharacterWizardProps) {
   const [loadingOptions, setLoadingOptions] = useState(true)
   const [step, setStep] = useState(0)
   const [name, setName] = useState('')
+  const [campaignName, setCampaignName] = useState('Nova campanha')
+  const [settingPrompt, setSettingPrompt] = useState('Uma aventura começa quando o personagem encontra um problema que não pode ignorar.')
+  const [tone, setTone] = useState<CampaignSetup['tone']>('adventure')
+  const [focus, setFocus] = useState<CampaignSetup['focus'][number]>('balanced')
   const [classId, setClassId] = useState('')
   const [speciesId, setSpeciesId] = useState('')
   const [speciesChoices, setSpeciesChoices] = useState<Record<string, string>>({})
@@ -285,6 +290,14 @@ export function CharacterWizard({ onCreated }: CharacterWizardProps) {
       class_equipment_option: classEquipmentOption,
       background_equipment_option: backgroundEquipmentOption,
       class_choices: {},
+      campaign_setup: {
+        campaign_name: campaignName.trim(),
+        tone,
+        focus: [focus],
+        difficulty_preference: 'standard',
+        setting_prompt: settingPrompt.trim(),
+        themes_to_avoid: [],
+      },
     }
   }
 
@@ -378,10 +391,19 @@ export function CharacterWizard({ onCreated }: CharacterWizardProps) {
           <form onSubmit={submit} noValidate>
             <div className="wizard-step" key={step}>
               {step === 0 && <>
-                <h2 ref={title} tabIndex={-1}>Como devemos chamar você?</h2>
-                <p>Escolha um nome para o personagem que vai viver esta história.</p>
+                <h2 ref={title} tabIndex={-1}>Vamos criar sua campanha</h2>
+                <p>Defina a semente da aventura. O Mestre criará uma abertura original com base nessas escolhas.</p>
+                <label className="wizard-label" htmlFor="campaign-name">Nome da campanha</label>
+                <input id="campaign-name" className="wizard-text" value={campaignName} onChange={(event) => { setCampaignName(event.target.value); setPreview(null) }} maxLength={80} placeholder="Ex.: As Cinzas do Norte" />
+                <label className="wizard-label" htmlFor="setting-prompt">Que tipo de mundo ou situação você imagina?</label>
+                <textarea id="setting-prompt" className="wizard-text wizard-textarea" value={settingPrompt} onChange={(event) => { setSettingPrompt(event.target.value); setPreview(null) }} maxLength={500} placeholder="Ex.: uma cidade costeira ameaçada por desaparecimentos" />
+                <fieldset className="wizard-fieldset"><legend className="wizard-label">Tom</legend><div className="wizard-options wizard-options--grid">
+                  {([['adventure', 'Aventura'], ['heroic', 'Heróico'], ['dark', 'Sombrio'], ['mystery', 'Mistério'], ['comedic', 'Cômico']] as const).map(([id, label]) => <label key={id} className={`wizard-choice ${tone === id ? 'is-selected' : ''}`}><input type="radio" name="campaign-tone" checked={tone === id} onChange={() => setTone(id)} /><span><strong>{label}</strong></span></label>)}
+                </div></fieldset>
+                <label className="wizard-label" htmlFor="campaign-focus">Foco principal</label>
+                <select id="campaign-focus" value={focus} onChange={(event) => setFocus(event.target.value as CampaignSetup['focus'][number])}><option value="balanced">Equilibrado</option><option value="exploration">Exploração</option><option value="investigation">Investigação</option><option value="social">Interação social</option><option value="combat">Combate</option></select>
                 <label className="wizard-label" htmlFor="character-name">Nome do personagem</label>
-                <input id="character-name" name="name" className="wizard-text" value={name} onChange={(event) => { setName(event.target.value); setPreview(null) }} maxLength={128} autoComplete="off" placeholder="Digite um nome" aria-describedby="name-help" />
+                <input id="character-name" name="name" className="wizard-text" value={name} onChange={(event) => { setName(event.target.value); setPreview(null) }} maxLength={64} autoComplete="off" placeholder="Digite um nome" aria-describedby="name-help" />
                 <small id="name-help" className="wizard-help">O personagem começa no nível 1.</small>
               </>}
 

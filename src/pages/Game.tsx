@@ -8,10 +8,19 @@ import { NarrativePanel } from '../components/NarrativePanel'
 import { RuleResolution } from '../components/RuleResolution'
 import { RuleTeachingPanel } from '../components/RuleTeachingPanel'
 import { StructuredActionCard } from '../components/StructuredActionCard'
+import { WorldCanvas } from '../components/WorldCanvas'
+import { adaptGameState } from '../game/adapters/gameStateAdapter'
 import { useGameSession } from '../state/useGameSession'
+import { useCallback, useMemo } from 'react'
 
 export function Game() {
   const session = useGameSession()
+  const { sendAction } = session
+  const visualSnapshot = useMemo(() => adaptGameState(session.state, session.character, session.availableActions), [session.state, session.character, session.availableActions])
+  const handleVisualIntent = useCallback((action: Record<string, unknown>) => {
+    const label = typeof action.label === 'string' ? action.label : typeof action.name === 'string' ? action.name : 'Interagir com a cena.'
+    void sendAction(label, action)
+  }, [sendAction])
   return (
     <div className={`app-shell ${session.hasSession ? 'app-shell--game' : 'app-shell--wizard'}`}>
       <div className="ambient-orb ambient-orb--one" aria-hidden="true" />
@@ -29,6 +38,7 @@ export function Game() {
           <div className="sidebar-note"><span className="note-mark" aria-hidden="true">✦</span><p><strong>Jogue no seu ritmo.</strong><br />O Mestre responde ao que você imagina.</p></div>
         </aside>
         <div className="story-column">
+          <WorldCanvas snapshot={visualSnapshot} isLoading={session.isLoading} onIntent={handleVisualIntent} />
           <NarrativePanel history={session.history} state={session.state} narrationStatus={session.narrationStatus} />
           <div className="turn-controls">
             {session.isLoading && <LoadingState />}

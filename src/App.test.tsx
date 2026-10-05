@@ -181,6 +181,12 @@ const expectedDraft = {
   background_ability_increases: { strength: 2, dexterity: 1 }, abilities,
   skills: ['athletics', 'persuasion'], language_choices: ['draconic', 'dwarvish'],
   class_equipment_option: 'A', background_equipment_option: 'A', class_choices: {},
+  campaign_setup: {
+    campaign_name: 'Nova campanha', tone: 'adventure', focus: ['balanced'],
+    difficulty_preference: 'standard',
+    setting_prompt: 'Uma aventura começa quando o personagem encontra um problema que não pode ignorar.',
+    themes_to_avoid: [],
+  },
 }
 
 describe('criação guiada PHB 2024 e sessão', () => {

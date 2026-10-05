@@ -86,7 +86,15 @@ export interface PHB2024CharacterOptions {
     selection_source: string
   }
 }
-
+export interface CampaignSetup {
+  campaign_name: string
+  tone: 'heroic' | 'dark' | 'mystery' | 'political' | 'comedic' | 'adventure'
+  focus: Array<'exploration' | 'investigation' | 'social' | 'combat' | 'balanced'>
+  difficulty_preference: 'gentle' | 'standard' | 'demanding'
+  setting_prompt: string
+  themes_to_avoid: string[]
+  character_goal?: string
+}
 export interface PHB2024CharacterDraft {
   name: string
   class_id: string
@@ -104,6 +112,7 @@ export interface PHB2024CharacterDraft {
   class_equipment_option: string
   background_equipment_option: string
   class_choices: Record<string, string>
+  campaign_setup?: CampaignSetup
 }
 
 export interface CharacterDraft {
