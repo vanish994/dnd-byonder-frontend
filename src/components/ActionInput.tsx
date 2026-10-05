@@ -58,7 +58,7 @@ export function ActionInput({ isLoading, onSubmit, suggestions = [] }: ActionInp
             <span>{isLoading ? 'Enviando' : 'Enviar'}</span>
           </button>
         </div>
-        <div className="composer-hint"><span>✦</span> Linguagem livre. As regras serão resolvidas pelo Mestre.</div>
+        <div className="composer-hint"><span>✦</span> Texto livre narra sua intenção; para rolar dados, escolha uma sugestão do Mestre.</div>
       </form>
     </section>
   )

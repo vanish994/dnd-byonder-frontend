@@ -358,7 +358,7 @@
   .hp-track { height: 2px; margin-top: 4px; }
   .character-equipment, .character-footer { display: none; }
   .story-column { display: flex; flex: 1 1 auto; flex-direction: column; overflow: hidden; padding: 0 2px 20px 0; }
-  .narrative-panel { flex-basis: clamp(300px, 46dvh, 420px); height: clamp(300px, 46dvh, 420px); padding: 10px 11px 0; background: rgba(18, 21, 23, .82); border: 1px solid var(--line); border-top-color: var(--line-bright); box-shadow: var(--shadow-deep); }
+  .narrative-panel { flex-basis: clamp(280px, 40dvh, 420px); height: clamp(280px, 40dvh, 420px); padding: 10px 11px 0; background: rgba(18, 21, 23, .82); border: 1px solid var(--line); border-top-color: var(--line-bright); box-shadow: var(--shadow-deep); }
   .narrative-history { min-height: 0; padding-right: 8px; }
   .narrative-entry { padding: 11px 0; }
   .narrative-entry p { font-size: 12px; line-height: 1.45; }
@@ -367,7 +367,7 @@
   .scene-banner { margin-bottom: 6px; padding-bottom: 6px; font-size: 8px; }
   .scene-location { font-size: 8px; }
   .scene-description { display: -webkit-box; max-height: 2.9em; margin: 0 0 7px; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: 11px; line-height: 1.4; }
-  .turn-controls { flex: 1 1 auto; min-height: 0; overflow: hidden; padding: 0 8px 4px 0; }
+  .turn-controls { flex: 1 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-color: var(--bronze) transparent; scrollbar-width: thin; padding: 0 8px 4px 0; }
   .loading-state { padding: 16px 0; }
   .combat-panel { margin: 16px 0; padding: 13px; }
   .resolution-card { margin: 16px 0 20px; }
@@ -389,7 +389,7 @@
   .available-actions .structured-action-card { gap: 5px; margin-top: 4px; padding: 5px 7px; }
   .available-actions .structured-action-card .section-kicker { display: none; }
   .available-actions .structured-action-card__copy h3 { margin: 0; font-size: 10px; }
-  .available-actions .structured-action-card__button { min-height: 25px; padding: 0 7px; font-size: 7px; }
+  .available-actions .structured-action-card__button { min-height: 44px; padding: 0 8px; font-size: 9px; }
   .action-zone { margin-top: 4px; padding-top: 4px; }
   .action-heading { display: none; }
   .action-glyph { display: none; }
@@ -397,9 +397,9 @@
   .action-composer > label { display: none; }
   .composer-row { gap: 5px; }
   .composer-row textarea { height: 38px; min-height: 38px; padding: 8px 9px; font-size: 12px; resize: none; }
-  .composer-row button { width: auto; min-width: 62px; min-height: 38px; margin-top: 0; font-size: 8px; letter-spacing: .04em; }
-  .composer-hint { display: none; }
-  .resolution-trigger { min-height: 25px; margin: 4px 0; padding: 0 8px; font-size: 8px; }
+  .composer-row button { width: auto; min-width: 62px; min-height: 44px; margin-top: 0; font-size: 9px; letter-spacing: .04em; }
+  .composer-hint { display: block; margin: 5px 2px 0; color: var(--paper-muted); font-size: 11px; line-height: 1.3; }
+  .resolution-trigger { min-height: 44px; margin: 4px 0; padding: 0 8px; font-size: 9px; }
   .resolution-modal-backdrop { padding: 12px; }
   .resolution-modal { max-height: 90dvh; padding: 15px; }
   .resolution-modal .resolution-main { gap: 14px; margin: 18px 0; }
@@ -416,6 +416,10 @@
   .game-layout { width: min(100% - 24px, 600px); }
   .game-header { width: min(100% - 24px, 600px); }
   .available-actions__count { min-width: 23px; height: 23px; font-size: 10px; }
+}
+
+@media (max-width: 760px) and (max-height: 720px) {
+  .narrative-panel { flex-basis: clamp(190px, 30dvh, 230px); height: clamp(190px, 30dvh, 230px); }
 }
 
 .narrative-entry p { white-space: pre-wrap; }
@@ -466,7 +470,7 @@
   .wizard-summary-section dl > div { font-size: 10px; }
   .wizard-summary-section dd small { font-size: 9px; }
   .wizard-controls { position: relative; z-index: 2; flex: 0 0 auto; gap: 6px; margin-top: 0; padding-top: 10px; background: linear-gradient(180deg, rgba(18, 20, 22, 0), rgba(18, 20, 22, .98) 28%); }
-  .wizard-button { min-height: 36px; padding: 7px 10px; font-size: 10px; }
+  .wizard-button { min-height: 44px; padding: 7px 10px; font-size: 10px; }
 }
 
 

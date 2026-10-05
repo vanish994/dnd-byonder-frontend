@@ -349,7 +349,7 @@ async function request(path: string, payload?: unknown, signal?: AbortSignal): P
     if (!response.ok) {
       // Do not echo arbitrary upstream error bodies or secrets into the browser.
       const message = response.status === 422 && path === '/v1/game/turn'
-        ? 'Essa ação não pode ser executada agora. Aguarde o turno correto ou escolha outra ação.'
+        ? 'Essa ação não pôde ser resolvida. Escolha uma sugestão do Mestre ou tente outra ação.'
         : response.status === 400 || response.status === 422
           ? 'Confira as escolhas do personagem e tente novamente.'
         : response.status === 429 ? 'Muitas tentativas. Aguarde um momento e tente novamente.'

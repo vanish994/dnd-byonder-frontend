@@ -188,6 +188,15 @@ describe('Gateway public game API', () => {
     await expect(validateCharacter(draft)).rejects.toMatchObject({ kind: 'http', status: 422, message: expect.not.stringContaining('private-key') })
   })
 
+  it('orienta a escolher uma ação sugerida quando o Rule Engine rejeita um turno', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(json({ detail: 'invalid structured action' }, 422))
+    await expect(sendGameTurn(request)).rejects.toMatchObject({
+      kind: 'http',
+      status: 422,
+      message: 'Essa ação não pôde ser resolvida. Escolha uma sugestão do Mestre ou tente outra ação.',
+    })
+  })
+
   it('classifica falha de rede de forma recuperável', async () => {
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'))
     await expect(loadCharacterOptions()).rejects.toMatchObject({ kind: 'network' })
