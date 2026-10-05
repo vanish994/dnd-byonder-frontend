@@ -52,6 +52,46 @@ const CHOICE_FIELD_NAMES: Record<string, string> = {
 type AbilityMap = Record<string, number>
 type BonusMode = 'two_one' | 'three_one'
 
+interface StarterPreset {
+  id: 'fighter' | 'wizard' | 'cleric'
+  name: string
+  characterName: string
+  description: string
+  classId: string
+  speciesId: string
+  speciesChoices: Record<string, string>
+  backgroundId: string
+  alignmentId: string
+  languages: string[]
+  backgroundIncreases: Record<string, number>
+  skills: string[]
+  classEquipmentOption: string
+  backgroundEquipmentOption: string
+}
+
+const STARTER_PRESETS: StarterPreset[] = [
+  {
+    id: 'fighter', name: 'Guerreiro', characterName: 'Kael', description: 'Resistente e direto, pronto para abrir caminho.',
+    classId: 'fighter', speciesId: 'dwarf', speciesChoices: {}, backgroundId: 'soldier', alignmentId: 'neutral_good',
+    languages: ['dwarvish', 'giant'], backgroundIncreases: { strength: 2, constitution: 1 },
+    skills: ['perception', 'survival'], classEquipmentOption: 'A', backgroundEquipmentOption: 'A',
+  },
+  {
+    id: 'wizard', name: 'Mago', characterName: 'Elian', description: 'Erudito arcano com repertório para qualquer mistério.',
+    classId: 'wizard', speciesId: 'elf', speciesChoices: { elven_lineage: 'high_elf', spellcasting_ability: 'intelligence', keen_senses_skill: 'perception' },
+    backgroundId: 'sage', alignmentId: 'neutral_good', languages: ['elvish', 'draconic'],
+    backgroundIncreases: { intelligence: 2, wisdom: 1 }, skills: ['investigation', 'religion'],
+    classEquipmentOption: 'A', backgroundEquipmentOption: 'A',
+  },
+  {
+    id: 'cleric', name: 'Clérigo', characterName: 'Mara', description: 'Guardião devoto, preparado para proteger e restaurar.',
+    classId: 'cleric', speciesId: 'human', speciesChoices: { size: 'medium', skillful_skill: 'arcana', versatile_feat: 'healer' },
+    backgroundId: 'acolyte', alignmentId: 'lawful_good', languages: ['draconic', 'dwarvish'],
+    backgroundIncreases: { wisdom: 2, charisma: 1 }, skills: ['history', 'persuasion'],
+    classEquipmentOption: 'A', backgroundEquipmentOption: 'A',
+  },
+]
+
 function displayId(value: string) {
   return value.split('_').map((part) => part ? part[0].toUpperCase() + part.slice(1) : '').join(' ')
 }
@@ -288,6 +328,90 @@ export function CharacterWizard({ onCreated }: CharacterWizardProps) {
     }
   }
 
+  function presetDraft(preset: StarterPreset): PHB2024CharacterDraft | null {
+    if (!options) return null
+    const chosenPresetClass = options.classes.find((choice) => choice.id === preset.classId)
+    const chosenPresetSpecies = options.species.find((choice) => choice.id === preset.speciesId)
+    const chosenPresetBackground = options.backgrounds.find((choice) => choice.id === preset.backgroundId)
+    const recommended = options.recommended_standard_array[preset.classId]
+    const validLanguages = new Set(options.language_rules.additional_options.map((language) => language.id))
+    const validSpeciesChoices = chosenPresetSpecies && Object.fromEntries(
+      Object.entries(preset.speciesChoices).filter(([field, value]) => chosenPresetSpecies.choices[field]?.includes(value)),
+    )
+    const selectedLanguages = preset.languages.filter((language) => validLanguages.has(language)).slice(0, options.language_rules.additional_choice_count)
+    const increases = Object.fromEntries(Object.entries(preset.backgroundIncreases).filter(([ability, bonus]) =>
+      chosenPresetBackground?.eligible_abilities.includes(ability) && bonus > 0,
+    ))
+    if (!chosenPresetClass || !chosenPresetSpecies || !chosenPresetBackground || !recommended ||
+      selectedLanguages.length !== options.language_rules.additional_choice_count ||
+      Object.keys(validSpeciesChoices ?? {}).length !== Object.keys(preset.speciesChoices).length ||
+      Object.keys(increases).length !== Object.keys(preset.backgroundIncreases).length ||
+      !chosenPresetClass.equipment_packages.some((pack) => pack.id === preset.classEquipmentOption) ||
+      !chosenPresetBackground.equipment_packages.some((pack) => pack.id === preset.backgroundEquipmentOption) ||
+      preset.skills.length !== chosenPresetClass.skill_choices.count ||
+      !preset.skills.every((skill) => chosenPresetClass.skill_choices.options.includes(skill))) return null
+    const base = { ...recommended }
+    const final = { ...base }
+    for (const [ability, bonus] of Object.entries(increases)) final[ability] = (final[ability] ?? 0) + bonus
+    return {
+      name: preset.characterName,
+      class_id: preset.classId,
+      level: 1,
+      species_id: preset.speciesId,
+      species_choices: validSpeciesChoices ?? {},
+      background_id: preset.backgroundId,
+      alignment_id: preset.alignmentId,
+      ability_method_id: 'standard_array',
+      base_abilities: base,
+      background_ability_increases: increases,
+      abilities: final,
+      skills: preset.skills,
+      language_choices: selectedLanguages,
+      class_equipment_option: preset.classEquipmentOption,
+      background_equipment_option: preset.backgroundEquipmentOption,
+      class_choices: {},
+    }
+  }
+
+  async function handlePreset(preset: StarterPreset) {
+    if (busy || submitting.current) return
+    const selectedDraft = presetDraft(preset)
+    if (!selectedDraft) {
+      setError(`A ficha pronta de ${preset.name} não está disponível no catálogo PHB 2024 atual.`)
+      return
+    }
+    submitting.current = true
+    setBusy(true)
+    setError(null)
+    try {
+      const validation = await validatePHB2024Character(selectedDraft)
+      setName(selectedDraft.name)
+      setClassId(selectedDraft.class_id)
+      setSpeciesId(selectedDraft.species_id)
+      setSpeciesChoices(selectedDraft.species_choices)
+      setBackgroundId(selectedDraft.background_id)
+      setAlignmentId(selectedDraft.alignment_id)
+      setLanguageChoices(selectedDraft.language_choices)
+      setAbilityMethodId(selectedDraft.ability_method_id)
+      setBaseAbilities(selectedDraft.base_abilities)
+      const [two, one] = Object.entries(selectedDraft.background_ability_increases)
+      setBonusMode('two_one')
+      setBoostTwo(two?.[0] ?? '')
+      setBoostOne(one?.[0] ?? '')
+      setBoostOnes([])
+      setSkills(selectedDraft.skills)
+      setClassEquipmentOption(selectedDraft.class_equipment_option)
+      setBackgroundEquipmentOption(selectedDraft.background_equipment_option)
+      setPreview(validation)
+      setStep(7)
+    } catch (failure) {
+      setError(requestError(failure))
+    } finally {
+      submitting.current = false
+      setBusy(false)
+    }
+  }
+
   async function next() {
     if (!complete || busy || submitting.current) return
     setError(null)
@@ -383,6 +507,23 @@ export function CharacterWizard({ onCreated }: CharacterWizardProps) {
                 <label className="wizard-label" htmlFor="character-name">Nome do personagem</label>
                 <input id="character-name" name="name" className="wizard-text" value={name} onChange={(event) => { setName(event.target.value); setPreview(null) }} maxLength={128} autoComplete="off" placeholder="Digite um nome" aria-describedby="name-help" />
                 <small id="name-help" className="wizard-help">O personagem começa no nível 1.</small>
+                <div className="starter-presets" aria-labelledby="starter-presets-title">
+                  <div className="starter-presets__heading">
+                    <span className="section-kicker"><span className="kicker-line" /> Início rápido</span>
+                    <h3 id="starter-presets-title">Comece com uma ficha pronta</h3>
+                    <p>Escolhas pré-configuradas com opções do Livro do Jogador 2024. O motor de regras valida a ficha antes de iniciar.</p>
+                  </div>
+                  <div className="starter-presets__grid">
+                    {STARTER_PRESETS.map((preset) => (
+                      <button key={preset.id} type="button" className="starter-preset" disabled={busy} onClick={() => void handlePreset(preset)}>
+                        <span className="starter-preset__crest" aria-hidden="true">{preset.name[0]}</span>
+                        <span className="starter-preset__copy"><strong>{preset.name}</strong><small>{preset.description}</small></span>
+                        <span className="starter-preset__action">Usar ficha</span>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="wizard-help">Você poderá voltar e personalizar as escolhas antes de confirmar a campanha.</p>
+                </div>
               </>}
 
               {step === 1 && <>

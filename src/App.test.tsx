@@ -20,7 +20,7 @@ const packages = (prefix: string) => [
 const options = {
   schema_version: 'character-options-phb2024-v1', ruleset: 'dnd-2024-phb', edition: 2024, supported_character_level: 1,
   classes: classIds.map((id) => ({ id, label: classLabels[id], source_name: id, levels: [1], hit_die: id === 'fighter' ? 10 : 8,
-    primary_abilities: ['strength'], skill_choices: { count: id === 'fighter' ? 2 : 1, options: id === 'fighter' ? ['athletics', 'persuasion', 'perception'] : ['athletics', 'perception'] },
+    primary_abilities: ['strength'], skill_choices: { count: id === 'fighter' ? 2 : 1, options: id === 'fighter' ? ['athletics', 'persuasion', 'perception', 'survival'] : ['athletics', 'perception'] },
     saving_throw_proficiencies: ['strength', 'constitution'], weapon_proficiencies: ['simple'], armor_proficiencies: [],
     level_1_features: [{ id: `${id}_feature`, name: 'Característica de nível 1', summary: 'Resumo.' }], equipment_packages: packages(`Pacote ${id}`) })),
   species: speciesIds.map((id) => ({ id, label: speciesLabels[id], source_name: id, choices: id === 'dwarf' ? {} : { size: ['medium', 'small'] } })),
@@ -197,6 +197,22 @@ describe('criação guiada PHB 2024 e sessão', () => {
     expect(screen.queryByText('Sessão ativa')).not.toBeInTheDocument()
     expect(screen.queryByText('Aventureiro sem nome')).not.toBeInTheDocument()
     expect(fetchMock.mock.calls.map(([url]) => new URL(String(url)).pathname)).toEqual(['/v2/character/options'])
+  })
+
+  it('oferece Guerreiro, Mago e Clérigo como fichas prontas e valida o preset no Backend', async () => {
+    const fetchMock = mockGateway()
+    render(<App />)
+    await screen.findByRole('textbox', { name: 'Nome do personagem' })
+    expect(screen.getByRole('button', { name: /Guerreiro.*Usar ficha/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Mago.*Usar ficha/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Clérigo.*Usar ficha/i })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /Guerreiro.*Usar ficha/i }))
+    expect(await screen.findByRole('heading', { name: 'Sua ficha, pronta para começar' })).toBeInTheDocument()
+    const validation = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/v2/character/validate'))
+    const presetDraft = JSON.parse(validation?.[1]?.body as string)
+    expect(presetDraft).toMatchObject({ class_id: 'fighter', level: 1, ability_method_id: 'standard_array', background_id: 'soldier', species_id: 'dwarf' })
+    expect(presetDraft).not.toHaveProperty('current_hp')
   })
 
   it('seleciona classe, espécie, origem, método de atributos e perícias sem reutilizar valores', async () => {
